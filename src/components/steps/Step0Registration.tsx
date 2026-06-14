@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Participant } from '@/lib/types'
 
 interface Step0Props {
@@ -53,8 +54,16 @@ export default function Step0Registration({ onComplete }: Step0Props) {
   return (
     <div className="step-transition w-full max-w-md mx-auto px-4 py-8">
       <div className="text-center mb-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6" style={{ border: '2px solid #C9A84C' }}>
-          <span className="text-2xl">🧠</span>
+        <div className="flex justify-center mb-6">
+          <Image
+            src="https://www.humanaix.mx/assets/logos/LogoHumanAltablanco.png"
+            alt="Human.AiX"
+            width={160}
+            height={40}
+            style={{ objectFit: 'contain' }}
+            unoptimized
+            priority
+          />
         </div>
         <h1 className="text-3xl font-bold mb-2">
           <span style={{ color: '#C9A84C' }}>Desbloquea</span><br />el Chip de IA
@@ -64,7 +73,7 @@ export default function Step0Registration({ onComplete }: Step0Props) {
         </p>
         <div className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5" style={{ backgroundColor: '#111', border: '1px solid #222' }}>
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-zinc-400">by <span className="font-medium" style={{ color: '#C9A84C' }}>Human.AiX</span></span>
+          <span className="text-xs text-zinc-400">Desbloquea el Chip de IA · <span className="font-medium" style={{ color: '#C9A84C' }}>Human.AiX</span></span>
         </div>
       </div>
 

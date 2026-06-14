@@ -1,86 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json()
-    const { messages, participant, selectedTopics, isInitial } = body
+    const { messages, participant } = await req.json()
+    const { nombre = '', puesto = '', departamento = '' } = participant || {}
 
-    const systemPrompt = `Eres un consultor de IA experto y empático de Human.AiX.
-Pregunta al usuario sobre sus 3 tareas más repetitivas en su trabajo (puesto: ${participant.position}, departamento: ${participant.department}).
-Sé amable, ejecutivo y directo. Usa un tono profesional pero cercano.
-Los temas de IA que le interesan son: ${selectedTopics.join(', ')}.
-Después de recopilar las 3 tareas repetitivas, agradece al usuario y di que ya tienes toda la información necesaria para crear su diagnóstico personalizado.
-Responde siempre en español. Sé conciso (máximo 3-4 oraciones por respuesta).
-NO uses markdown, escribe en texto plano conversacional.`
+    const systemPrompt = `Eres un coach de productividad experto en automatización e IA aplicada al trabajo real.
+Tu objetivo es ayudar a ${nombre}, ${puesto} del área de ${departamento}, a identificar entre 1 y 3 tareas repetitivas de su trabajo diario que podrían automatizarse o potenciarse con IA.
 
-    const anthropicMessages = isInitial
-      ? []
-      : messages.map((m: { role: string; content: string }) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        }))
+REGLAS:
+- Haz UNA sola pregunta a la vez. Espera la respuesta antes de continuar.
+- Usa un tono cálido, directo y motivacional. Habla de tú.
+- Basa tus preguntas en lo que ya sabes de su puesto y área.
+- No uses tecnicismos innecesarios.
+- Después de 4-5 preguntas, presenta un resumen con las tareas identificadas en formato: Tarea · Frecuencia estimada · Por qué es automatizable.
 
-    const initialMessage = isInitial
-      ? `Hola ${participant.name}! Soy tu consultor de IA de Human.AiX. Me da gusto que estés aquí. Para crear tu diagnóstico personalizado, necesito conocer mejor tu trabajo diario. ¿Cuáles son las 3 tareas más repetitivas que realizas como ${participant.position}? (Las que más tiempo te consumen cada semana)`
-      : undefined
+SECUENCIA DE PREGUNTAS SUGERIDA (adapta según respuestas):
+1. ¿Qué tarea de tu semana sientes que haces en "piloto automático" y que te consume más tiempo del que debería?
+2. ¿Cada cuánto la haces y cuánto tiempo le dedicas aproximadamente?
+3. ¿Qué información necesitas para hacerla y dónde vive esa información hoy?
+4. ¿Dónde termina esa tarea? ¿Qué produce o a quién le llega el resultado?
+5. Si pudieras liberar ese tiempo, ¿en qué lo invertirías?
+
+Al finalizar, presenta el resumen y pregunta: "¿Identificamos más tareas o seguimos?"`
+
+    const stream = await client.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: messages.map((m: { role: string; content: string }) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+    })
 
     const encoder = new TextEncoder()
-
-    const stream = new ReadableStream({
+    const readable = new ReadableStream({
       async start(controller) {
-        try {
-          if (isInitial) {
-            // Stream the initial greeting
-            const words = initialMessage!.split(' ')
-            for (const word of words) {
-              const data = JSON.stringify({ text: word + ' ' })
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`))
-              await new Promise((r) => setTimeout(r, 30))
-            }
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
-            controller.close()
-            return
-          }
-
-          const response = await client.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 500,
-            system: systemPrompt,
-            messages: anthropicMessages,
-            stream: true,
-          })
-
-          for await (const event of response) {
-            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-              const data = JSON.stringify({ text: event.delta.text })
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`))
-            }
-            if (event.type === 'message_stop') {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
-            }
-          }
-
-          controller.close()
-        } catch (err) {
-          controller.error(err)
+        for await (const chunk of stream) {
+          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta')
+            controller.enqueue(encoder.encode(chunk.delta.text))
         }
+        controller.close()
       },
     })
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      },
-    })
+    return new Response(readable, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   } catch (err) {
-    console.error('Chat error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('chat:', err)
+    return new Response('Error en el chat', { status: 500 })
   }
 }
