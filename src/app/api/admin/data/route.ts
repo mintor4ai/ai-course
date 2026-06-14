@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, created_at, nombre, puesto, departamento, email, curso_fecha, event_id,
       responses (
-        aprendizajes, tareas_repetitivas, chat_messages,
+        id, aprendizajes, tareas_repetitivas, chat_messages,
         horas_proyectadas, area_impacto, nivel_listo, plan_90_dias, updated_at
       ),
       diagnostics (

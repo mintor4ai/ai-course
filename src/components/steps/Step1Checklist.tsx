@@ -27,13 +27,15 @@ export default function Step1Checklist({ participantId, nombre, onComplete }: St
     if (selected.length !== REQUIRED || loading) return
     setLoading(true)
     try {
+      const labels = selected.map(id => TOPICS.find(t => t.id === id)?.label ?? id)
       await fetch('/api/responses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantId, aprendizajes: selected }),
+        body: JSON.stringify({ participantId, aprendizajes: labels }),
       })
     } catch { /* continue */ }
-    onComplete(selected)
+    const labels = selected.map(id => TOPICS.find(t => t.id === id)?.label ?? id)
+    onComplete(labels)
   }
 
   const remaining = REQUIRED - selected.length
