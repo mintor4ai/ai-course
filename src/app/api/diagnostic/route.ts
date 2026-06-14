@@ -136,7 +136,7 @@ CIERRE:
       await transport.sendMail({
         from: `"Human.AiX" <${process.env.GMAIL_USER}>`,
         to: participant.email,
-        cc: 'charlie@humanaix.com',
+        cc: 'mentor@mindset4.ai',
         subject: `Tu Diagnóstico IA — ${participant.nombre} | Desbloquea el Chip de IA`,
         html,
       })
