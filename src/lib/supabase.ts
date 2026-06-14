@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Server-side client with service role (for API routes)
+// Server-side client with service role (only use in API routes)
 export function createServiceClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
   return createClient(supabaseUrl, serviceRoleKey, {
