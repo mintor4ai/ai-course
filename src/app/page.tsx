@@ -28,24 +28,25 @@ function AppContent() {
 
   if (step === 6) {
     return (
-      <main className="min-h-screen bg-black flex items-center justify-center px-4">
+      <main className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center max-w-xs">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6" style={{ background: 'rgba(201,168,76,0.08)', border: '2px solid #C9A84C' }}>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6"
+            style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.1),rgba(217,70,239,0.1))', border: '2px solid #7C3AED' }}>
             <span className="text-3xl">🎉</span>
           </div>
-          <h1 className="text-2xl font-bold mb-3" style={{ color: '#C9A84C' }}>¡Completado!</h1>
-          <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+          <h1 className="text-2xl font-bold mb-3 text-zinc-900">¡<span style={{ color: '#7C3AED' }}>Completado!</span></h1>
+          <p className="text-zinc-500 text-sm mb-6 leading-relaxed">
             Tu diagnóstico ejecutivo de IA fue generado y enviado. Nos vemos en 90 días.
           </p>
-          <p className="text-zinc-600 text-xs italic">"Tú eres el piloto. La IA es tu copiloto."</p>
-          <p className="text-zinc-700 text-xs mt-2">— Human.AiX · Carlos García &amp; Rodolfo Ordorica</p>
+          <p className="text-zinc-300 text-xs italic">"Tú eres el piloto. La IA es tu copiloto."</p>
+          <p className="text-zinc-300 text-xs mt-2">— Human.AiX · Carlos García &amp; Rodolfo Ordorica</p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-black">
+    <main className="min-h-screen bg-white">
       <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} />
       <div className="pb-24 pt-2">
         {step === 0 && (
