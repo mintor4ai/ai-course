@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { participantId, aprendizajes, tareas_repetitivas, chat_messages,
-            horas_proyectadas, area_impacto, nivel_listo, plan_90_dias } = body
+            horas_proyectadas, area_impacto, nivel_listo, plan_90_dias, calificacion } = body
     if (!participantId)
       return NextResponse.json({ error: 'participantId requerido' }, { status: 400 })
     const supabase = createServiceClient()
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     if (area_impacto !== undefined)       updates.area_impacto = area_impacto
     if (nivel_listo !== undefined)        updates.nivel_listo = nivel_listo
     if (plan_90_dias !== undefined)       updates.plan_90_dias = plan_90_dias
+    if (calificacion !== undefined)       updates.calificacion = calificacion
     if (existing) {
       await supabase.from('responses').update(updates).eq('id', existing.id)
       return NextResponse.json({ id: existing.id })

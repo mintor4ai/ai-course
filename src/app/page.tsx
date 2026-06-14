@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import ProgressBar from '@/components/ProgressBar'
 import Step0Registration from '@/components/steps/Step0Registration'
+import Step0Rating from '@/components/steps/Step0Rating'
 import Step1Checklist from '@/components/steps/Step1Checklist'
 import Step2Chat from '@/components/steps/Step2Chat'
 import Step3Impact from '@/components/steps/Step3Impact'
@@ -11,7 +12,7 @@ import Step4Plan from '@/components/steps/Step4Plan'
 import Step5Diagnostic from '@/components/steps/Step5Diagnostic'
 import { Participant, ChatMessage, ImpactAnswers, Compromiso } from '@/lib/types'
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS = 7
 
 function AppContent() {
   const searchParams = useSearchParams()
@@ -26,7 +27,7 @@ function AppContent() {
   const [impactAnswers, setImpactAnswers] = useState<ImpactAnswers>({})
   const [plan90Dias, setPlan90Dias] = useState<Compromiso[]>([])
 
-  if (step === 6) {
+  if (step === 7) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center max-w-xs">
@@ -55,38 +56,45 @@ function AppContent() {
             onComplete={(p, id) => { setParticipant(p); setParticipantId(id); setStep(1) }}
           />
         )}
-        {step === 1 && participant && (
-          <Step1Checklist
+        {step === 1 && participant && participantId && (
+          <Step0Rating
             participantId={participantId}
             nombre={participant.nombre}
-            onComplete={(s) => { setAprendizajes(s); setStep(2) }}
+            onComplete={() => setStep(2)}
           />
         )}
         {step === 2 && participant && (
+          <Step1Checklist
+            participantId={participantId}
+            nombre={participant.nombre}
+            onComplete={(s) => { setAprendizajes(s); setStep(3) }}
+          />
+        )}
+        {step === 3 && participant && (
           <Step2Chat
             participant={participant}
             participantId={participantId}
             aprendizajes={aprendizajes}
-            onComplete={(msgs, res) => { setChatMessages(msgs); setTareasResumen(res); setStep(3) }}
+            onComplete={(msgs, res) => { setChatMessages(msgs); setTareasResumen(res); setStep(4) }}
           />
         )}
-        {step === 3 && (
+        {step === 4 && (
           <Step3Impact
             participantId={participantId}
-            onComplete={(ans) => { setImpactAnswers(ans); setStep(4) }}
+            onComplete={(ans) => { setImpactAnswers(ans); setStep(5) }}
           />
         )}
-        {step === 4 && participant && (
+        {step === 5 && participant && (
           <Step4Plan
             participant={participant}
             participantId={participantId}
             aprendizajes={aprendizajes}
             tareasResumen={tareasResumen}
             impactAnswers={impactAnswers}
-            onComplete={(plan) => { setPlan90Dias(plan); setStep(5) }}
+            onComplete={(plan) => { setPlan90Dias(plan); setStep(6) }}
           />
         )}
-        {step === 5 && participant && (
+        {step === 6 && participant && (
           <Step5Diagnostic
             participant={participant}
             participantId={participantId}
@@ -94,7 +102,7 @@ function AppContent() {
             tareasResumen={tareasResumen}
             impactAnswers={impactAnswers}
             plan90Dias={plan90Dias}
-            onComplete={() => setStep(6)}
+            onComplete={() => setStep(7)}
           />
         )}
       </div>

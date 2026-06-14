@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       id, created_at, nombre, puesto, departamento, email, curso_fecha, event_id,
       responses (
         id, aprendizajes, tareas_repetitivas, chat_messages,
-        horas_proyectadas, area_impacto, nivel_listo, plan_90_dias, updated_at
+        horas_proyectadas, area_impacto, nivel_listo, plan_90_dias, calificacion, updated_at
       ),
       diagnostics (
         email_status, sent_at, created_at
