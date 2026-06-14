@@ -23,7 +23,8 @@ ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public_select_events" ON events FOR SELECT USING (true);
 
 -- Update admin view to include event info
-CREATE OR REPLACE VIEW admin_full_view AS
+DROP VIEW IF EXISTS admin_full_view;
+CREATE VIEW admin_full_view AS
 SELECT
   p.id            AS participant_id,
   p.nombre,
