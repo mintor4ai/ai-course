@@ -1,27 +1,23 @@
 export interface Participant {
   id?: string
-  name: string
-  position: string
-  department: string
+  created_at?: string
+  nombre: string
+  puesto: string
+  departamento: string
   email: string
-  created_at?: string
+  curso_fecha?: string
 }
 
-export interface Response {
-  id?: string
-  participant_id: string
-  step: number
-  data: Record<string, unknown>
-  created_at?: string
+export interface TareaRepetitiva {
+  tarea: string
+  frecuencia: string
+  por_que_automatizable: string
 }
 
-export interface Diagnostic {
-  id?: string
-  participant_id: string
-  html_content: string
-  plan_90_days: string
-  sent_at?: string
-  created_at?: string
+export interface Compromiso {
+  titulo: string
+  descripcion: string
+  metrica: string
 }
 
 export interface ChatMessage {
@@ -29,65 +25,48 @@ export interface ChatMessage {
   content: string
 }
 
-export interface AppState {
-  step: number
-  participant: Participant | null
-  participantId: string | null
-  selectedTopics: string[]
-  chatMessages: ChatMessage[]
-  impactAnswers: Record<string, string>
-  plan90Days: string
-  diagnosticHtml: string
+export interface ImpactAnswers {
+  horas_proyectadas?: string
+  area_impacto?: string
+  nivel_listo?: string
 }
 
-export interface ImpactQuestion {
-  id: string
-  question: string
-  options: string[]
-}
+export const TOPICS = [
+  { id: '1',  label: 'ROCA — Método de prompting estructurado',                                modulo: 'M3' },
+  { id: '2',  label: 'IEI — Implementar, Evaluar, Iterar',                                     modulo: 'Transversal' },
+  { id: '3',  label: 'WEF y FOBO — El contexto del mercado laboral',                           modulo: 'M1' },
+  { id: '4',  label: 'Curva del Empoderamiento IA (Kübler-Ross)',                               modulo: 'M1' },
+  { id: '5',  label: '3 Niveles de Proyectos de IA y La Matriz',                               modulo: 'M1' },
+  { id: '6',  label: 'ChatGPT como espejo estratégico / partner de pensamiento',                modulo: 'M2' },
+  { id: '7',  label: 'Técnica: Chain of Thought (Pasito a Pasito)',                            modulo: 'M3' },
+  { id: '8',  label: 'Técnica: Step-Back Prompting (Pongámonos de Acuerdo)',                   modulo: 'M3' },
+  { id: '9',  label: 'Técnica: Tree of Thoughts (Elige tu Propia Aventura)',                   modulo: 'M3' },
+  { id: '10', label: 'Las 3 Personas IA: Communicator, Interviewer, Challenger',               modulo: 'M3' },
+  { id: '11', label: 'Entorno ChatGPT — GPTs personalizados y Proyectos',                      modulo: 'M4' },
+  { id: '12', label: 'Copilot + Excel',                                                         modulo: 'M4' },
+  { id: '13', label: 'Context Engineering y Ventana de Contexto / Tokens',                     modulo: 'M4' },
+  { id: '14', label: 'Qué es un Agente de IA (Cerebro, Instrucciones, Memoria, Herramientas)',  modulo: 'M4' },
+  { id: '15', label: 'NotebookLM — Laboratorio interactivo de documentos',                     modulo: 'M4' },
+  { id: '16', label: 'Automatización con Make.com',                                             modulo: 'M6' },
+  { id: '17', label: 'Gamma.app — Presentaciones con IA',                                       modulo: 'M6' },
+  { id: '18', label: 'Liderazgo para la adopción IA en equipos',                               modulo: 'M5' },
+  { id: '19', label: 'SUNO — Creación musical con IA',                                         modulo: 'Herramientas' },
+  { id: '20', label: 'Cómo evitar alucinaciones — Context Engineering avanzado',               modulo: 'M3/M4' },
+] as const
 
-export const IMPACT_QUESTIONS: ImpactQuestion[] = [
-  {
-    id: 'weekly_hours',
-    question: '¿Cuántas horas a la semana dedicas a tareas repetitivas?',
-    options: ['1-5 horas', '5-10 horas', '10-20 horas', '+20 horas'],
-  },
-  {
-    id: 'urgency',
-    question: '¿Qué tan urgente es resolver esto para ti?',
-    options: ['Es crítico ya', 'Importante este trimestre', 'Lo haría si pudiera', 'No es prioridad'],
-  },
-  {
-    id: 'team_size',
-    question: '¿Cuántas personas de tu equipo podrían beneficiarse?',
-    options: ['Solo yo', '2-5 personas', '6-15 personas', '+15 personas'],
-  },
-  {
-    id: 'ai_usage',
-    question: '¿Tu organización ya usa herramientas de IA?',
-    options: ['Sí, activamente', 'Algo, pocas personas', 'Casi nada', 'No usamos'],
-  },
-]
-
-export const AI_TOPICS = [
-  'Automatización de correos y comunicaciones',
-  'Generación de reportes y análisis de datos',
-  'Redacción de documentos y presentaciones',
-  'Gestión de agenda y coordinación de reuniones',
-  'Investigación y síntesis de información',
-  'Atención al cliente y respuestas frecuentes',
-  'Creación de contenido para redes sociales',
-  'Análisis de contratos y documentos legales',
-  'Gestión de proyectos y seguimiento de tareas',
-  'Capacitación y onboarding de personal',
-  'Análisis de métricas y KPIs',
-  'Elaboración de propuestas comerciales',
-  'Transcripción y resumen de reuniones',
-  'Control de calidad y revisión de procesos',
-  'Gestión de inventarios y logística',
-  'Análisis de competencia y mercado',
-  'Soporte técnico de primer nivel',
-  'Gestión documental y archivo',
-  'Traducción y adaptación de contenidos',
-  'Planificación estratégica y forecasting',
-]
+export const IMPACT_OPTIONS = {
+  horas: ['1h', '2h', '3h', '5h', '8h', '+8h'],
+  area: [
+    'Calidad de mis entregables',
+    'Velocidad de ejecución',
+    'Toma de decisiones',
+    'Liderazgo de mi equipo',
+    'Todas las anteriores',
+  ],
+  nivel: [
+    '🔥 Listo, arranco mañana',
+    '🤔 Necesito practicar un poco más',
+    '😅 Aún me da algo de miedo',
+    '💪 Ya lo venía usando, ahora con más estructura',
+  ],
+} as const

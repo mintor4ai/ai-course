@@ -4,108 +4,180 @@ import { useState } from 'react'
 import { Participant } from '@/lib/types'
 
 interface Step0Props {
-  onComplete: (data: Participant) => void
-  isLoading: boolean
+  onComplete: (participant: Participant, id: string) => void
 }
 
-export default function Step0Registration({ onComplete, isLoading }: Step0Props) {
-  const [formData, setFormData] = useState<Participant>({
+export default function Step0Registration({ onComplete }: Step0Props) {
+  const [form, setForm] = useState({
     name: '',
     position: '',
     department: '',
     email: '',
   })
-  const [errors, setErrors] = useState<Partial<Participant>>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const validate = (): boolean => {
-    const newErrors: Partial<Participant> = {}
-    if (!formData.name.trim()) newErrors.name = 'El nombre es requerido'
-    if (!formData.position.trim()) newErrors.position = 'El puesto es requerido'
-    if (!formData.department.trim()) newErrors.department = 'El departamento es requerido'
-    if (!formData.email.trim()) {
-      newErrors.email = 'El email es requerido'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'El email no es válido'
-    }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (validate()) {
-      onComplete(formData)
-    }
-  }
+    setError('')
 
-  const handleChange = (field: keyof Participant) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }))
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
+    if (!form.name || !form.position || !form.department || !form.email) {
+      setError('Por favor completa todos los campos.')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setError('Por favor ingresa un email válido.')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al guardar el registro')
+      }
+
+      const data = await response.json()
+      onComplete(form as Participant, data.id)
+    } catch {
+      setError('Hubo un error al procesar tu registro. Intenta de nuevo.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 py-12">
-      <div className="w-full max-w-md animate-fade-in">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-block px-3 py-1 bg-gold/10 border border-gold/30 rounded-full text-gold text-xs font-semibold tracking-widest uppercase mb-4">
-            Diagnóstico IA Personalizado
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-3">
-            Bienvenido a tu
-            <span className="block text-gold-gradient">Desbloqueo de IA</span>
-          </h1>
-          <p className="text-white/60 text-sm leading-relaxed">
-            En los próximos minutos, descubrirás cómo la IA puede transformar tu trabajo.
-            Comencemos conociéndote.
-          </p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {[
-            { field: 'name' as keyof Participant, label: 'Nombre completo', placeholder: 'Ej: Ana García', type: 'text' },
-            { field: 'position' as keyof Participant, label: 'Puesto / Cargo', placeholder: 'Ej: Gerente de Operaciones', type: 'text' },
-            { field: 'department' as keyof Participant, label: 'Departamento / Área', placeholder: 'Ej: Recursos Humanos', type: 'text' },
-            { field: 'email' as keyof Participant, label: 'Email corporativo', placeholder: 'tu@empresa.com', type: 'email' },
-          ].map(({ field, label, placeholder, type }) => (
-            <div key={field}>
-              <label className="block text-white/80 text-sm font-medium mb-2">
-                {label}
-              </label>
-              <input
-                type={type}
-                value={formData[field]}
-                onChange={handleChange(field)}
-                placeholder={placeholder}
-                className={`w-full px-4 py-3.5 bg-white/5 border rounded-xl text-white placeholder-white/25
-                  focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold/50 transition-all duration-200
-                  text-sm ${errors[field] ? 'border-red-500/70' : 'border-white/15'}`}
-              />
-              {errors[field] && (
-                <p className="mt-1.5 text-xs text-red-400">{errors[field]}</p>
-              )}
+    <div className="min-h-screen bg-black flex flex-col">
+      {/* Hero section */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md animate-slide-up">
+          {/* Logo / Brand */}
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <span className="text-3xl">✦</span>
+              <span className="text-sm uppercase tracking-[0.3em] text-gray-400 font-medium">
+                Human.AiX
+              </span>
             </div>
-          ))}
+            <h1 className="text-4xl font-bold mb-3 leading-tight">
+              Desbloquea el{' '}
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #C9A84C, #E2C97E)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                Chip de IA
+              </span>
+            </h1>
+            <p className="text-gray-400 text-base leading-relaxed">
+              Tu diagnóstico personalizado de inteligencia artificial en el trabajo
+            </p>
+          </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-4 px-6 rounded-xl font-semibold text-black text-sm tracking-wide
-              transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-              bg-gold hover:bg-gold-light active:scale-[0.98] mt-2"
-            style={{ background: isLoading ? '#A8892F' : 'linear-gradient(135deg, #C9A84C 0%, #D4B86A 100%)' }}
-          >
-            {isLoading ? 'Registrando...' : 'Comenzar mi Diagnóstico →'}
-          </button>
-        </form>
+          {/* Form */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl">
+            <h2 className="text-xl font-semibold mb-6 text-white">
+              Comencemos con tus datos
+            </h2>
 
-        {/* Footer note */}
-        <p className="text-center text-white/30 text-xs mt-6">
-          Tu información es confidencial y solo se usa para personalizar tu diagnóstico.
-        </p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                  Nombre completo
+                </label>
+                <input
+                  type="text"
+                  placeholder="Tu nombre"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="input-dark"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                  Puesto / Cargo
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Gerente de Operaciones"
+                  value={form.position}
+                  onChange={(e) => setForm({ ...form, position: e.target.value })}
+                  className="input-dark"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                  Departamento / Área
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Recursos Humanos"
+                  value={form.department}
+                  onChange={(e) => setForm({ ...form, department: e.target.value })}
+                  className="input-dark"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                  Correo electrónico
+                </label>
+                <input
+                  type="email"
+                  placeholder="tu@empresa.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="input-dark"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {error && (
+                <div className="bg-red-900/30 border border-red-500/50 rounded-lg px-4 py-3">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-2 text-base py-4 font-bold tracking-wide rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#C9A84C', color: '#000' }}
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    Procesando...
+                  </span>
+                ) : (
+                  'Iniciar mi diagnóstico IA →'
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Trust indicators */}
+          <div className="mt-6 flex items-center justify-center gap-4 text-xs text-gray-600">
+            <span>🔒 Datos seguros</span>
+            <span>·</span>
+            <span>5 minutos</span>
+            <span>·</span>
+            <span>Plan personalizado gratis</span>
+          </div>
+        </div>
       </div>
     </div>
   )
