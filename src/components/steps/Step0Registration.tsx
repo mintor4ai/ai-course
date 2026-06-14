@@ -5,10 +5,11 @@ import Image from 'next/image'
 import { Participant } from '@/lib/types'
 
 interface Step0Props {
+  eventId?: string
   onComplete: (participant: Participant, id: string) => void
 }
 
-export default function Step0Registration({ onComplete }: Step0Props) {
+export default function Step0Registration({ eventId, onComplete }: Step0Props) {
   const [form, setForm] = useState({ nombre: '', puesto: '', departamento: '', email: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -32,7 +33,7 @@ export default function Step0Registration({ onComplete }: Step0Props) {
       const res = await fetch('/api/participants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(eventId ? { ...form, event_id: eventId } : form),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al registrar')

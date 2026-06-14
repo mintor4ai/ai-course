@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ProgressBar from '@/components/ProgressBar'
 import Step0Registration from '@/components/steps/Step0Registration'
 import Step1Checklist from '@/components/steps/Step1Checklist'
@@ -12,7 +13,10 @@ import { Participant, ChatMessage, ImpactAnswers, Compromiso } from '@/lib/types
 
 const TOTAL_STEPS = 6
 
-export default function Home() {
+function AppContent() {
+  const searchParams = useSearchParams()
+  const eventId = searchParams.get('event') ?? undefined
+
   const [step, setStep] = useState(0)
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [participantId, setParticipantId] = useState('')
@@ -34,7 +38,7 @@ export default function Home() {
             Tu diagnóstico ejecutivo de IA fue generado y enviado. Nos vemos en 90 días.
           </p>
           <p className="text-zinc-600 text-xs italic">"Tú eres el piloto. La IA es tu copiloto."</p>
-          <p className="text-zinc-700 text-xs mt-2">— Human.AiX · Carlos García & Rodolfo Ordorica</p>
+          <p className="text-zinc-700 text-xs mt-2">— Human.AiX · Carlos García &amp; Rodolfo Ordorica</p>
         </div>
       </main>
     )
@@ -44,7 +48,12 @@ export default function Home() {
     <main className="min-h-screen bg-black">
       <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} />
       <div className="pb-24 pt-2">
-        {step === 0 && <Step0Registration onComplete={(p, id) => { setParticipant(p); setParticipantId(id); setStep(1) }} />}
+        {step === 0 && (
+          <Step0Registration
+            eventId={eventId}
+            onComplete={(p, id) => { setParticipant(p); setParticipantId(id); setStep(1) }}
+          />
+        )}
         {step === 1 && participant && (
           <Step1Checklist
             participantId={participantId}
@@ -89,5 +98,13 @@ export default function Home() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <AppContent />
+    </Suspense>
   )
 }

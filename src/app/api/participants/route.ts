@@ -3,13 +3,15 @@ import { createServiceClient } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, puesto, departamento, email } = await req.json()
+    const { nombre, puesto, departamento, email, event_id } = await req.json()
     if (!nombre || !puesto || !departamento || !email)
       return NextResponse.json({ error: 'Todos los campos son requeridos' }, { status: 400 })
     const supabase = createServiceClient()
+    const insert: Record<string, string> = { nombre, puesto, departamento, email }
+    if (event_id) insert.event_id = event_id
     const { data, error } = await supabase
       .from('participants')
-      .insert({ nombre, puesto, departamento, email })
+      .insert(insert)
       .select('id')
       .single()
     if (error) throw error

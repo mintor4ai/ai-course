@@ -15,12 +15,12 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServiceClient()
   const { searchParams } = new URL(req.url)
-  const fecha = searchParams.get('fecha')
+  const eventId = searchParams.get('event_id')
 
   let query = supabase
     .from('participants')
     .select(`
-      id, created_at, nombre, puesto, departamento, email, curso_fecha,
+      id, created_at, nombre, puesto, departamento, email, curso_fecha, event_id,
       responses (
         aprendizajes, tareas_repetitivas, chat_messages,
         horas_proyectadas, area_impacto, nivel_listo, plan_90_dias, updated_at
@@ -31,19 +31,10 @@ export async function GET(req: NextRequest) {
     `)
     .order('created_at', { ascending: false })
 
-  if (fecha) query = query.eq('curso_fecha', fecha)
+  if (eventId) query = query.eq('event_id', eventId)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Distinct course dates for session tabs
-  const { data: dates } = await supabase
-    .from('participants')
-    .select('curso_fecha')
-    .order('curso_fecha', { ascending: false })
-
-  const allDates = (dates ?? []).map((r: { curso_fecha: string }) => r.curso_fecha).filter(Boolean)
-  const uniqueDates = Array.from(new Set(allDates))
-
-  return NextResponse.json({ participants: data ?? [], dates: uniqueDates })
+  return NextResponse.json({ participants: data ?? [] })
 }
