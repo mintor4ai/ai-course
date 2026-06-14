@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         horas_proyectadas, area_impacto, nivel_listo, plan_90_dias, calificacion, updated_at
       ),
       diagnostics (
-        email_status, sent_at, created_at
+        email_status, sent_at, created_at, duracion_minutos
       )
     `)
     .order('created_at', { ascending: false })

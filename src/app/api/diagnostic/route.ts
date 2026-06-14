@@ -162,9 +162,17 @@ CIERRE:
 
     // Save to Supabase
     const supabase = createServiceClient()
+
+    // Calculate duration from participant registration to now
+    const { data: participantData } = await supabase
+      .from('participants').select('created_at').eq('id', participantId).single()
+    const duracion_minutos = participantData?.created_at
+      ? Math.round((Date.now() - new Date(participantData.created_at).getTime()) / 60000)
+      : null
+
     const { data: diagData } = await supabase
       .from('diagnostics')
-      .insert({ participant_id: participantId, html_content: html })
+      .insert({ participant_id: participantId, html_content: html, duracion_minutos })
       .select('id').single()
 
     // Send email

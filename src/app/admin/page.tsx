@@ -21,7 +21,7 @@ interface ResponseData {
   horas_proyectadas?: string; area_impacto?: string; nivel_listo?: string; plan_90_dias?: Compromiso[]
   calificacion?: number
 }
-interface DiagnosticData { email_status?: string; sent_at?: string }
+interface DiagnosticData { email_status?: string; sent_at?: string; duracion_minutos?: number }
 interface ParticipantRow {
   id: string; created_at: string; nombre: string; puesto: string
   departamento: string; email: string; curso_fecha: string; event_id?: string
@@ -108,6 +108,7 @@ function ParticipantDetail({ p, auth, onClose }: { p: ParticipantRow; auth: stri
               { l: 'Horas/año', v: r?.horas_proyectadas ? `${(HOURS[r.horas_proyectadas] ?? 0) * 52}h` : '—' },
               { l: 'Área de impacto', v: r?.area_impacto ?? '—' },
               { l: 'Nivel listo', v: r?.nivel_listo ?? '—' },
+              { l: 'Tiempo total', v: d?.duracion_minutos != null ? `${d.duracion_minutos} min` : '—' },
             ].map(({ l, v }) => (
               <div key={l} style={{ background: PL, border: `1px solid ${PB}`, borderRadius: 10, padding: '10px 14px', flex: 1, minWidth: 130 }}>
                 <div style={{ color: '#9CA3AF', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{l}</div>
@@ -329,15 +330,17 @@ export default function AdminPage() {
 
   const exportCSV = () => {
     const rows = [
-      ['Nombre', 'Puesto', 'Departamento', 'Email', 'Evento', 'Horas/semana', 'Horas/año', 'Área de impacto', 'Nivel listo', 'Email Status', 'Aprendizaje 1', 'Aprendizaje 2', 'Aprendizaje 3', 'Aprendizaje 4', 'Aprendizaje 5', 'Plan 90 días', 'Respuestas conversación'],
+      ['Nombre', 'Puesto', 'Departamento', 'Email', 'Calificación', 'Tiempo (min)', 'Evento', 'Horas/semana', 'Horas/año', 'Área de impacto', 'Nivel listo', 'Email Status', 'Aprendizaje 1', 'Aprendizaje 2', 'Aprendizaje 3', 'Aprendizaje 4', 'Aprendizaje 5', 'Plan 90 días', 'Respuestas conversación'],
       ...participants.map(p => {
-        const r = resp(p); const ev = events.find(e => e.id === p.event_id)
+        const r = resp(p); const d2 = diag(p); const ev = events.find(e => e.id === p.event_id)
         const aps = r?.aprendizajes ?? []
         const plan = (r?.plan_90_dias ?? []).map((c, i) => `${i + 1}. ${c.titulo}: ${c.descripcion} [Métrica: ${c.metrica}]`).join(' | ')
         const chat = (r?.chat_messages ?? []).filter(m => m.role === 'user').map((m, i) => `R${i + 1}: ${m.content}`).join(' | ')
-        return [p.nombre, p.puesto, p.departamento, p.email, ev ? `${ev.empresa} – ${ev.nombre}` : '',
+        return [p.nombre, p.puesto, p.departamento, p.email,
+          r?.calificacion ?? '', d2?.duracion_minutos ?? '',
+          ev ? `${ev.empresa} – ${ev.nombre}` : '',
           r?.horas_proyectadas ?? '', `${(HOURS[r?.horas_proyectadas ?? ''] ?? 0) * 52}h`,
-          r?.area_impacto ?? '', r?.nivel_listo ?? '', diag(p)?.email_status ?? '',
+          r?.area_impacto ?? '', r?.nivel_listo ?? '', d2?.email_status ?? '',
           aps[0] ?? '', aps[1] ?? '', aps[2] ?? '', aps[3] ?? '', aps[4] ?? '', plan, chat]
       })
     ]
