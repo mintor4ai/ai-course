@@ -1,0 +1,32 @@
+export const MANTRAS = [
+  'La IA no reemplaza tu talento, lo amplifica...',
+  'Tu mejor versión profesional está a un prompt de distancia...',
+  'Desbloquea el Chip de IA dentro de ti...',
+  'El futuro pertenece a quienes colaboran con la IA...',
+  'Transformando tus horas repetitivas en impacto estratégico...',
+  'Cada tarea automatizada es tiempo que recuperas para lo que importa...',
+  'La productividad del futuro empieza con una sola decisión...',
+]
+
+export const AI_TOPICS = [
+  'Automatización de correos y comunicaciones',
+  'Generación de reportes y análisis de datos',
+  'Redacción de documentos y presentaciones',
+  'Gestión de agenda y coordinación de reuniones',
+  'Investigación y síntesis de información',
+  'Atención al cliente y respuestas frecuentes',
+  'Creación de contenido para redes sociales',
+  'Análisis de contratos y documentos legales',
+  'Gestión de proyectos y seguimiento de tareas',
+  'Capacitación y onboarding de personal',
+  'Análisis de métricas y KPIs',
+  'Elaboración de propuestas comerciales',
+  'Transcripción y resumen de reuniones',
+  'Control de calidad y revisión de procesos',
+  'Gestión de inventarios y logística',
+  'Análisis de competencia y mercado',
+  'Soporte técnico de primer nivel',
+  'Gestión documental y archivo',
+  'Traducción y adaptación de contenidos',
+  'Planificación estratégica y forecasting',
+]
