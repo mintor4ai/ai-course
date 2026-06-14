@@ -1,269 +1,132 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ChatMessage } from '@/lib/types'
-import LoadingMantras from '@/components/LoadingMantras'
+import { ChatMessage, Participant } from '@/lib/types'
 
 interface Step2Props {
-  onComplete: (messages: ChatMessage[], summary: string) => void
-  participant: { name: string; position: string; department: string }
-  selectedTopics: string[]
+  participant: Participant
+  participantId: string
+  aprendizajes: string[]
+  onComplete: (messages: ChatMessage[], resumen: string) => void
 }
 
-const MIN_EXCHANGES = 3
+export default function Step2Chat({ participant, participantId, aprendizajes, onComplete }: Step2Props) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'assistant',
+      content: `Hola ${participant.nombre}, qué gusto conocerte. Veo que eres ${participant.puesto} en ${participant.departamento}.\n\n"La claridad no siempre llega sola. A veces hay que provocarla."\n\n¿Qué tarea de tu semana sientes que haces en "piloto automático" y que te consume más tiempo del que debería?`,
+    },
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [canFinish, setCanFinish] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-export default function Step2Chat({ onComplete, participant, selectedTopics }: Step2Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [inputValue, setInputValue] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(true)
-  const [canComplete, setCanComplete] = useState(false)
-  const [streamingContent, setStreamingContent] = useState('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, streamingContent])
+    if (messages.filter((m) => m.role === 'user').length >= 4) setCanFinish(true)
+  }, [messages])
 
-  // Initialize conversation
-  useEffect(() => {
-    const init = async () => {
-      setIsInitializing(true)
-      await sendToAPI([])
-      setIsInitializing(false)
-    }
-    init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const sendToAPI = async (currentMessages: ChatMessage[]) => {
-    setIsStreaming(true)
-    setStreamingContent('')
-
+  const send = async () => {
+    const text = input.trim()
+    if (!text || loading) return
+    const updated: ChatMessage[] = [...messages, { role: 'user', content: text }]
+    setMessages(updated)
+    setInput('')
+    setLoading(true)
     try {
-      const response = await fetch('/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: currentMessages,
-          participant,
-          selectedTopics,
+          messages: updated,
+          participant: { nombre: participant.nombre, puesto: participant.puesto, departamento: participant.departamento },
         }),
       })
-
-      if (!response.ok) throw new Error('Error en la respuesta')
-      if (!response.body) throw new Error('Sin body en la respuesta')
-
-      const reader = response.body.getReader()
+      const reader = res.body?.getReader()
       const decoder = new TextDecoder()
-      let fullContent = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') continue
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.type === 'delta' && parsed.text) {
-                fullContent += parsed.text
-                setStreamingContent(fullContent)
-              }
-            } catch {
-              // Skip malformed JSON
-            }
-          }
+      let aiText = ''
+      setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          aiText += decoder.decode(value)
+          setMessages((prev) => { const c = [...prev]; c[c.length - 1] = { role: 'assistant', content: aiText }; return c })
         }
       }
-
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: fullContent,
-      }
-
-      const newMessages = [...currentMessages, assistantMessage]
-      setMessages(newMessages)
-      setStreamingContent('')
-
-      // Check if conversation should end (assistant said they have all info)
-      const hasEnoughInfo =
-        newMessages.filter((m) => m.role === 'user').length >= MIN_EXCHANGES ||
-        fullContent.toLowerCase().includes('toda la información') ||
-        fullContent.toLowerCase().includes('tengo todo') ||
-        fullContent.toLowerCase().includes('gracias')
-
-      if (hasEnoughInfo && newMessages.filter((m) => m.role === 'user').length >= 2) {
-        setCanComplete(true)
-      }
-    } catch (error) {
-      console.error('Chat error:', error)
-      const errorMessage: ChatMessage = {
-        role: 'assistant',
-        content: 'Lo siento, hubo un error. Por favor intenta de nuevo.',
-      }
-      setMessages((prev) => [...prev, errorMessage])
-    } finally {
-      setIsStreaming(false)
-    }
+      if (updated.filter((m) => m.role === 'user').length >= 4) setCanFinish(true)
+    } catch {
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'Hubo un error. Intenta nuevamente.' }])
+    } finally { setLoading(false) }
   }
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isStreaming) return
-
-    const userMessage: ChatMessage = { role: 'user', content: inputValue.trim() }
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    setInputValue('')
-
-    await sendToAPI(newMessages)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
-
-  const handleComplete = () => {
-    const summary = messages
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content)
-      .join('. ')
-    onComplete(messages, summary)
-  }
-
-  if (isInitializing) {
-    return <LoadingMantras message="Iniciando consultor IA..." />
+  const finish = async () => {
+    setLoading(true)
+    const resumen = messages.filter((m) => m.role === 'user').map((m) => m.content).join(' | ')
+    try {
+      await fetch('/api/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId, tareas_repetitivas: resumen, chat_messages: messages }),
+      })
+    } catch { /* continue */ }
+    onComplete(messages, resumen)
   }
 
   return (
-    <div className="flex flex-col h-[80vh] max-w-2xl mx-auto px-4">
-      {/* Header */}
-      <div className="py-4 border-b border-white/10 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gold/20 border border-gold/40 flex items-center justify-center">
-            <span className="text-gold text-xs font-bold">IA</span>
-          </div>
-          <div>
-            <p className="text-white text-sm font-semibold">Consultor IA</p>
-            <p className="text-white/40 text-xs">Human.AiX · En línea</p>
-          </div>
-        </div>
+    <div className="step-transition w-full max-w-lg mx-auto flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
+      <div className="px-4 pb-3">
+        <h2 className="text-xl font-bold mb-1">Tareas <span style={{ color: '#C9A84C' }}>Repetitivas</span></h2>
+        <p className="text-zinc-500 text-xs">Conversa con tu coach de IA. Responde con naturalidad.</p>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} chat-bubble-enter`}
-          >
-            {message.role === 'assistant' && (
-              <div className="w-6 h-6 rounded-full bg-gold/20 border border-gold/30 flex-shrink-0 mr-2 mt-1 flex items-center justify-center">
-                <span className="text-gold text-[8px] font-bold">IA</span>
-              </div>
+      <div className="flex-1 overflow-y-auto px-4 space-y-3 pb-2">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {msg.role === 'assistant' && (
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1" style={{ backgroundColor: '#C9A84C', color: '#000' }}>IA</div>
             )}
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                message.role === 'user'
-                  ? 'bg-gold text-black font-medium rounded-tr-sm'
-                  : 'bg-white/8 text-white/90 border border-white/10 rounded-tl-sm'
-              }`}
+              className="max-w-[82%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
+              style={msg.role === 'user'
+                ? { background: 'linear-gradient(135deg,#C9A84C,#A8872E)', color: '#000', borderRadius: '18px 18px 4px 18px' }
+                : { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#e5e5e5', borderRadius: '18px 18px 18px 4px' }}
             >
-              {message.content}
+              {msg.content || <span className="flex gap-1 py-1">{[0,150,300].map((d) => <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: '#888', animationDelay: `${d}ms` }} />)}</span>}
             </div>
           </div>
         ))}
-
-        {/* Streaming content */}
-        {streamingContent && (
-          <div className="flex justify-start chat-bubble-enter">
-            <div className="w-6 h-6 rounded-full bg-gold/20 border border-gold/30 flex-shrink-0 mr-2 mt-1 flex items-center justify-center">
-              <span className="text-gold text-[8px] font-bold">IA</span>
-            </div>
-            <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm bg-white/8 text-white/90 border border-white/10 text-sm leading-relaxed">
-              {streamingContent}
-              <span className="inline-block w-0.5 h-4 bg-gold ml-0.5 animate-pulse" />
-            </div>
-          </div>
-        )}
-
-        {/* Thinking indicator */}
-        {isStreaming && !streamingContent && (
-          <div className="flex justify-start">
-            <div className="w-6 h-6 rounded-full bg-gold/20 border border-gold/30 flex-shrink-0 mr-2 mt-1 flex items-center justify-center">
-              <span className="text-gold text-[8px] font-bold">IA</span>
-            </div>
-            <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white/8 border border-white/10">
-              <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-gold/60 animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
+        <div ref={bottomRef} />
       </div>
 
-      {/* Complete button */}
-      {canComplete && (
-        <div className="py-3 border-t border-white/10">
-          <button
-            onClick={handleComplete}
-            className="w-full py-3 px-6 rounded-xl bg-gold/20 border border-gold/40 text-gold
-              font-semibold text-sm hover:bg-gold/30 transition-all duration-200 mb-3"
-          >
-            Continuar al siguiente paso →
+      <div className="px-4 pt-3 border-t border-zinc-800">
+        {canFinish && (
+          <button onClick={finish} disabled={loading} className="w-full py-2.5 mb-2 rounded-xl text-sm font-semibold border" style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
+            ✓ Listo — continuar al siguiente paso
           </button>
-        </div>
-      )}
-
-      {/* Input area */}
-      <div className="py-3 border-t border-white/10">
-        <div className="flex gap-3 items-end">
+        )}
+        <div className="flex gap-2 items-end">
           <textarea
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
             placeholder="Escribe tu respuesta..."
             rows={2}
-            disabled={isStreaming}
-            className="flex-1 px-4 py-3 bg-white/5 border border-white/15 rounded-xl text-white
-              placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold/50
-              resize-none text-sm disabled:opacity-50 transition-all duration-200"
+            className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm placeholder-zinc-600 resize-none"
+            onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
+            onBlur={(e) => (e.target.style.borderColor = '')}
+            style={{ outline: 'none' }}
           />
           <button
-            onClick={handleSend}
-            disabled={!inputValue.trim() || isStreaming}
-            className="flex-shrink-0 w-11 h-11 rounded-xl bg-gold flex items-center justify-center
-              disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gold-light
-              active:scale-95 transition-all duration-200"
+            onClick={send}
+            disabled={!input.trim() || loading}
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg,#C9A84C,#A8872E)' }}
           >
-            <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2L5 8L2 14L14 8Z" fill="black" /></svg>
           </button>
         </div>
-        <p className="text-white/25 text-xs mt-2 text-center">Enter para enviar · Shift+Enter para nueva línea</p>
       </div>
     </div>
   )

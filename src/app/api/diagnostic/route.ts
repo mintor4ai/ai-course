@@ -4,9 +4,68 @@ import nodemailer from 'nodemailer'
 import { google } from 'googleapis'
 import { createServiceClient } from '@/lib/supabase'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+})
 
-async function createGmailTransport() {
+async function generateDiagnosticHtml(
+  participant: { name: string; position: string; department: string; email: string },
+  selectedTopics: string[],
+  chatMessages: { role: string; content: string }[],
+  impactAnswers: Record<string, string>,
+  plan90Days: string
+): Promise<string> {
+  const chatSummary = chatMessages
+    .filter((m) => m.role === 'user')
+    .map((m) => m.content)
+    .join(' | ')
+
+  const prompt = `Genera un reporte HTML de diagnóstico de IA ejecutivo y visualmente impresionante para:
+
+Nombre: ${participant.name}
+Puesto: ${participant.position}
+Departamento: ${participant.department}
+Email: ${participant.email}
+Fecha: ${new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
+
+Temas de IA seleccionados: ${selectedTopics.join(', ')}
+Tareas repetitivas identificadas: ${chatSummary}
+Horas semanales en tareas repetitivas: ${impactAnswers.weekly_hours}
+Urgencia: ${impactAnswers.urgency}
+Equipo beneficiado: ${impactAnswers.team_size}
+Uso actual de IA: ${impactAnswers.ai_usage}
+
+Plan 90 días:
+${plan90Days}
+
+Genera HTML completo (con <!DOCTYPE html>) con estilos inline. Usa esta paleta:
+- Negro #000000 como fondo principal
+- Blanco #FFFFFF para texto
+- Dorado #C9A84C para acentos, títulos y elementos destacados
+- Gris oscuro #111111 y #1a1a1a para secciones
+
+El reporte debe incluir:
+1. Header con logo de Human.AiX (texto estilizado), nombre del curso "Desbloquea el Chip de IA" y fecha
+2. Sección de perfil del participante con datos
+3. Scorecard visual de impacto (con los 4 indicadores del paso 3)
+4. Los 5 temas de IA seleccionados como "áreas de oportunidad" con íconos o viñetas doradas
+5. El plan de 90 días formateado beautifully
+6. Sección de próximos pasos y call-to-action para el curso
+7. Footer con branding Human.AiX
+
+Haz el HTML mobile-responsive y visualmente ejecutivo. Usa fuente Arial/sans-serif. El diseño debe verse como un reporte McKinsey.
+Responde SOLO con el HTML completo, sin markdown ni explicaciones.`
+
+  const response = await client.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 4096,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  return response.content[0].type === 'text' ? response.content[0].text : ''
+}
+
+async function sendEmail(to: string, name: string, htmlContent: string): Promise<void> {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GMAIL_CLIENT_ID,
     process.env.GMAIL_CLIENT_SECRET,
@@ -17,9 +76,9 @@ async function createGmailTransport() {
     refresh_token: process.env.GMAIL_REFRESH_TOKEN,
   })
 
-  const { token } = await oauth2Client.getAccessToken()
+  const accessToken = await oauth2Client.getAccessToken()
 
-  return nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       type: 'OAuth2',
@@ -27,115 +86,79 @@ async function createGmailTransport() {
       clientId: process.env.GMAIL_CLIENT_ID,
       clientSecret: process.env.GMAIL_CLIENT_SECRET,
       refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-      accessToken: token as string,
+      accessToken: accessToken.token || '',
     },
+  } as nodemailer.TransportOptions)
+
+  await transporter.sendMail({
+    from: `"Human.AiX | Desbloquea el Chip de IA" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: `${name}, tu Diagnóstico IA Personalizado está aquí ✦`,
+    html: htmlContent,
+    text: `Hola ${name}, tu diagnóstico de IA personalizado de Human.AiX está listo. Por favor abre este email en un cliente que soporte HTML para verlo correctamente.`,
   })
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
+    const body = await request.json()
     const {
       participant,
       participantId,
-      aprendizajes,
-      tareasResumen,
+      selectedTopics,
+      chatMessages,
       impactAnswers,
-      plan90Dias,
-    } = await req.json()
+      plan90Days,
+    } = body
 
-    // Generate HTML diagnostic report
-    const prompt = `Eres un consultor senior de McKinsey especializado en transformación digital e IA.
-Genera un Diagnóstico Ejecutivo de IA completo en HTML para este participante del curso "Desbloquea el Chip de IA" de Human.AiX.
+    if (!participant || !participantId) {
+      return NextResponse.json({ error: 'Missing participant data' }, { status: 400 })
+    }
 
-PERFIL DEL PARTICIPANTE:
-- Nombre: ${participant.name}
-- Puesto: ${participant.position}
-- Departamento: ${participant.department}
-- Email: ${participant.email}
+    // 1. Generate HTML diagnostic
+    const htmlContent = await generateDiagnosticHtml(
+      participant,
+      selectedTopics,
+      chatMessages,
+      impactAnswers,
+      plan90Days
+    )
 
-DATOS DEL DIAGNÓSTICO:
-- Top 5 aprendizajes seleccionados: ${JSON.stringify(aprendizajes)}
-- Tareas repetitivas identificadas: ${tareasResumen}
-- Horas semanales a recuperar: ${impactAnswers.horas_proyectadas || impactAnswers.hoursPerWeek || 'No especificado'}
-- Área de mayor impacto: ${impactAnswers.area_impacto || impactAnswers.urgency || 'No especificado'}
-- Nivel de listo: ${impactAnswers.nivel_listo || impactAnswers.aiUsage || 'No especificado'}
-- Plan 90 días: ${JSON.stringify(plan90Dias)}
+    // 2. Send email
+    let sentAt: string | null = null
+    try {
+      await sendEmail(participant.email, participant.name, htmlContent)
+      sentAt = new Date().toISOString()
+    } catch (emailError) {
+      console.error('Email error (non-fatal):', emailError)
+      // Continue even if email fails - save to DB
+    }
 
-Genera un email HTML completo, ejecutivo y profesional con:
-1. Encabezado Human.AiX con colores negro (#000) y dorado (#C9A84C)
-2. Saludo personalizado con nombre del participante
-3. Resumen ejecutivo de su perfil de adopción IA
-4. Análisis de sus 3 principales oportunidades de automatización
-5. Estimación de impacto: horas recuperadas al año y valor aproximado
-6. Su Plan de 90 días resumido (máx 3-4 compromisos clave)
-7. Quick wins: 2 acciones concretas para esta semana
-8. Herramientas recomendadas con casos de uso específicos
-9. CTA para el programa completo Human.AiX
-10. Cierre con firma y mantra del curso
-
-ESTILO: Ejecutivo, directo, cálido. Tono McKinsey pero humano.
-FORMATO: HTML completo con estilos inline para email clients.
-COLORES: Fondo negro (#000000), texto blanco (#FFFFFF), acentos dorado (#C9A84C).
-
-Responde ÚNICAMENTE con el HTML completo, sin markdown ni explicaciones.`
-
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const htmlContent = response.content[0].type === 'text' ? response.content[0].text : ''
-
-    // Save to Supabase
+    // 3. Save to Supabase
     const supabase = createServiceClient()
-    const { data: diagnostic, error: dbError } = await supabase
+    const { data, error } = await supabase
       .from('diagnostics')
       .insert({
         participant_id: participantId,
         html_content: htmlContent,
-        plan_90_days: JSON.stringify(plan90Dias),
+        plan_90_days: plan90Days,
+        sent_at: sentAt,
       })
-      .select()
+      .select('id')
       .single()
 
-    if (dbError) {
-      console.error('Supabase diagnostic error:', dbError)
-    }
-
-    // Attempt to send email via Gmail OAuth2
-    let emailStatus: 'sent' | 'failed' = 'failed'
-    try {
-      const transport = await createGmailTransport()
-      await transport.sendMail({
-        from: `"Human.AiX — Desbloquea el Chip de IA" <${process.env.GMAIL_USER}>`,
-        to: participant.email,
-        subject: `🚀 Tu Diagnóstico Ejecutivo de IA, ${participant.name.split(' ')[0]}`,
-        html: htmlContent,
-      })
-
-      // Update sent_at timestamp
-      if (diagnostic?.id) {
-        await supabase
-          .from('diagnostics')
-          .update({ sent_at: new Date().toISOString() })
-          .eq('id', diagnostic.id)
-      }
-
-      emailStatus = 'sent'
-    } catch (emailErr) {
-      console.error('Email send error:', emailErr)
-      // Don't fail the whole request if email fails
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Database error saving diagnostic' }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      emailStatus,
-      html: htmlContent,
-      diagnosticId: diagnostic?.id,
+      diagnosticId: data.id,
+      emailSent: !!sentAt,
     })
-  } catch (err: unknown) {
-    console.error('diagnostic error:', err)
-    return NextResponse.json({ error: 'Error al generar el diagnóstico' }, { status: 500 })
+  } catch (err) {
+    console.error('Diagnostic error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

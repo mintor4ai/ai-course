@@ -1,166 +1,136 @@
 'use client'
 
 import { useState } from 'react'
-
-interface Step3Data {
-  hoursPerWeek: string
-  urgency: string
-  teamSize: string
-  aiUsage: string
-}
+import { IMPACT_QUESTIONS } from '@/lib/types'
 
 interface Step3Props {
-  onComplete: (data: Step3Data) => void
-  isLoading: boolean
+  participantId: string
+  onComplete: (answers: Record<string, string>) => void
 }
 
-const QUESTIONS = [
-  {
-    id: 'hoursPerWeek' as keyof Step3Data,
-    question: '¿Cuántas horas a la semana dedicas a tareas repetitivas?',
-    options: ['1-5 horas', '5-10 horas', '10-20 horas', '+20 horas'],
-    icons: ['⏱️', '⏰', '🕐', '⚡'],
-  },
-  {
-    id: 'urgency' as keyof Step3Data,
-    question: '¿Qué tan urgente es resolver esto para ti?',
-    options: ['Es crítico ya', 'Importante este trimestre', 'Lo haría si pudiera', 'No es prioridad'],
-    icons: ['🔥', '📅', '💭', '🌙'],
-  },
-  {
-    id: 'teamSize' as keyof Step3Data,
-    question: '¿Cuántas personas de tu equipo podrían beneficiarse?',
-    options: ['Solo yo', '2-5 personas', '6-15 personas', '+15 personas'],
-    icons: ['👤', '👥', '👨‍👩‍👧‍👦', '🏢'],
-  },
-  {
-    id: 'aiUsage' as keyof Step3Data,
-    question: '¿Tu organización ya usa herramientas de IA?',
-    options: ['Sí, activamente', 'Algo, pocas personas', 'Casi nada', 'No usamos'],
-    icons: ['🚀', '🌱', '💤', '❌'],
-  },
-]
-
-export default function Step3Impact({ onComplete, isLoading }: Step3Props) {
-  const [answers, setAnswers] = useState<Partial<Step3Data>>({})
+export default function Step3Impact({ participantId, onComplete }: Step3Props) {
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(false)
   const [currentQuestion, setCurrentQuestion] = useState(0)
 
-  const handleSelect = (questionId: keyof Step3Data, option: string) => {
+  const handleSelect = (questionId: string, option: string) => {
     const newAnswers = { ...answers, [questionId]: option }
     setAnswers(newAnswers)
 
-    // Auto-advance after a short delay
-    setTimeout(() => {
-      if (currentQuestion < QUESTIONS.length - 1) {
-        setCurrentQuestion((prev) => prev + 1)
-      }
-    }, 350)
-  }
-
-  const handleSubmit = () => {
-    if (Object.keys(answers).length === QUESTIONS.length) {
-      onComplete(answers as Step3Data)
+    // Auto advance to next question
+    if (currentQuestion < IMPACT_QUESTIONS.length - 1) {
+      setTimeout(() => setCurrentQuestion(currentQuestion + 1), 400)
     }
   }
 
-  const allAnswered = Object.keys(answers).length === QUESTIONS.length
-  const question = QUESTIONS[currentQuestion]
+  const allAnswered = IMPACT_QUESTIONS.every((q) => answers[q.id])
+
+  const handleContinue = async () => {
+    if (!allAnswered) return
+    setIsLoading(true)
+    try {
+      await fetch('/api/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participant_id: participantId,
+          step: 3,
+          data: { impact_answers: answers },
+        }),
+      })
+      onComplete(answers)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
-    <div className="flex flex-col min-h-[80vh] px-4 py-8">
-      <div className="w-full max-w-lg mx-auto animate-fade-in">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">
-            Midamos el <span className="text-gold">impacto potencial</span>
+    <div className="min-h-screen bg-black pb-32">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="mb-8 animate-fade-in">
+          <h2 className="text-2xl font-bold mb-2">
+            Mide tu{' '}
+            <span style={{ color: '#C9A84C' }}>impacto potencial</span>
           </h2>
-          <p className="text-white/60 text-sm">
-            {currentQuestion + 1} de {QUESTIONS.length} preguntas
+          <p className="text-gray-400 text-sm">
+            Responde estas 4 preguntas para calibrar tu diagnóstico personalizado.
           </p>
         </div>
 
-        {/* Question progress */}
-        <div className="flex gap-2 mb-8">
-          {QUESTIONS.map((q, i) => (
-            <div
-              key={i}
-              onClick={() => answers[q.id] && setCurrentQuestion(i)}
-              className={`flex-1 h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                answers[q.id]
-                  ? 'bg-gold'
-                  : i === currentQuestion
-                  ? 'bg-white/40'
-                  : 'bg-white/10'
-              }`}
-            />
-          ))}
-        </div>
+        <div className="space-y-6">
+          {IMPACT_QUESTIONS.map((question, qIndex) => {
+            const isActive = qIndex <= currentQuestion
+            const isAnswered = !!answers[question.id]
 
-        {/* Current question */}
-        <div className="mb-8 animate-slide-up" key={currentQuestion}>
-          <h3 className="text-lg font-semibold text-white mb-6 leading-snug">
-            {question.question}
-          </h3>
-
-          <div className="grid grid-cols-2 gap-3">
-            {question.options.map((option, optIndex) => {
-              const isSelected = answers[question.id] === option
-              return (
-                <button
-                  key={option}
-                  onClick={() => handleSelect(question.id, option)}
-                  className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border
-                    text-center transition-all duration-200 active:scale-[0.96]
-                    ${isSelected
-                      ? 'bg-gold/20 border-gold text-white gold-glow'
-                      : 'bg-white/5 border-white/12 text-white/80 hover:bg-white/8 hover:border-white/25'
-                    }`}
+            return (
+              <div
+                key={question.id}
+                className={`transition-all duration-500 ${
+                  isActive ? 'opacity-100 translate-y-0' : 'opacity-30 pointer-events-none'
+                }`}
+              >
+                <div
+                  className="bg-gray-900 rounded-xl p-5"
+                  style={{ border: isAnswered ? '1px solid rgba(201,168,76,0.5)' : '1px solid #1f2937' }}
                 >
-                  <span className="text-2xl">{question.icons[optIndex]}</span>
-                  <span className="text-sm font-medium leading-tight">{option}</span>
-                  {isSelected && (
-                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
-                      <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
+                  <div className="flex items-start gap-3 mb-4">
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={isAnswered
+                        ? { backgroundColor: '#C9A84C', color: '#000' }
+                        : { backgroundColor: '#1f2937', color: '#9ca3af' }}
+                    >
+                      {isAnswered ? '✓' : qIndex + 1}
                     </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+                    <p className="font-medium text-sm leading-relaxed">{question.question}</p>
+                  </div>
 
-        {/* Previous answers summary */}
-        {Object.keys(answers).length > 0 && (
-          <div className="mb-6 p-4 bg-white/3 border border-white/8 rounded-xl">
-            <p className="text-white/40 text-xs font-semibold uppercase tracking-wide mb-3">Tus respuestas</p>
-            <div className="space-y-2">
-              {QUESTIONS.filter((q) => answers[q.id]).map((q) => (
-                <div key={q.id} className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-gold mt-1.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-white/40 text-xs">{q.question.substring(0, 40)}...</p>
-                    <p className="text-white/80 text-xs font-medium">{answers[q.id]}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {question.options.map((option) => {
+                      const isSelected = answers[question.id] === option
+                      return (
+                        <button
+                          key={option}
+                          onClick={() => handleSelect(question.id, option)}
+                          className="px-3 py-3 rounded-xl text-sm font-medium text-left transition-all duration-200 border active:scale-[0.97]"
+                          style={isSelected
+                            ? { backgroundColor: '#C9A84C', borderColor: '#C9A84C', color: '#000' }
+                            : { borderColor: '#374151', backgroundColor: '#1f2937', color: '#d1d5db' }}
+                        >
+                          {option}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
-        {/* Submit */}
-        {allAnswered && (
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-full py-4 px-6 rounded-xl font-semibold text-black text-sm tracking-wide
-              bg-gold hover:bg-gold-light active:scale-[0.98] transition-all duration-200
-              disabled:opacity-50 shadow-lg shadow-gold/20"
-          >
-            {isLoading ? 'Analizando...' : 'Generar mi Plan de 90 Días →'}
-          </button>
-        )}
+      {/* Fixed bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur border-t border-gray-800 px-4 py-4">
+        <div className="max-w-2xl mx-auto">
+          {allAnswered ? (
+            <button
+              onClick={handleContinue}
+              disabled={isLoading}
+              className="w-full py-4 rounded-xl font-bold text-base transition-all duration-200 active:scale-[0.99]"
+              style={{ backgroundColor: '#C9A84C', color: '#000' }}
+            >
+              {isLoading ? 'Analizando...' : 'Generar mi plan de 90 días →'}
+            </button>
+          ) : (
+            <div className="text-center">
+              <p className="text-gray-500 text-sm">
+                {Object.keys(answers).length} de {IMPACT_QUESTIONS.length} preguntas respondidas
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
