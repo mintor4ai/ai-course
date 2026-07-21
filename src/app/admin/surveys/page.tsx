@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
+import SurveyDesignerModal from './SurveyDesignerModal'
 
 const P = '#7C3AED'
 const PL = '#F5F3FF'
@@ -11,6 +12,7 @@ const PG = 'linear-gradient(135deg,#7C3AED,#D946EF)'
 interface Campaign {
   id: string; nombre: string; empresa: string; tipo: string
   descripcion?: string; status: string; created_at: string
+  survey_config?: Record<string, unknown>
 }
 interface SurveyResponse {
   profile_name?: string
@@ -395,6 +397,7 @@ export default function SurveysAdmin() {
   const [importCampaignId, setImportCampaignId] = useState<string | null>(null)
   const [inviting, setInviting] = useState<string | null>(null)
   const [selectedRespondent, setSelectedRespondent] = useState<Respondent | null>(null)
+  const [designCampaign, setDesignCampaign] = useState<Campaign | null>(null)
   const [baseUrl, setBaseUrl] = useState('')
 
   useEffect(() => { setBaseUrl(window.location.origin) }, [])
@@ -599,6 +602,10 @@ export default function SurveysAdmin() {
                   <div style={{ borderTop: `1px solid ${PB}` }}>
                     {/* Action bar */}
                     <div style={{ padding: '14px 24px', background: PL, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <button onClick={() => setDesignCampaign(c)}
+                        style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {c.survey_config?.version === 1 ? '✨' : '🗂️'} Encuesta
+                      </button>
                       <button onClick={() => setImportCampaignId(c.id)}
                         style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                         📥 Importar emails
@@ -705,6 +712,16 @@ export default function SurveysAdmin() {
           r={selectedRespondent}
           baseUrl={baseUrl}
           onClose={() => setSelectedRespondent(null)}
+        />
+      )}
+      {designCampaign && (
+        <SurveyDesignerModal
+          campaignId={designCampaign.id}
+          campaignName={designCampaign.nombre}
+          currentConfig={designCampaign.survey_config}
+          auth={auth}
+          onClose={() => setDesignCampaign(null)}
+          onSaved={() => { fetchCampaigns(auth); setDesignCampaign(null) }}
         />
       )}
     </main>

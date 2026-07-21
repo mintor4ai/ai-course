@@ -6,7 +6,7 @@ export default async function SurveyPage({ params }: { params: { token: string }
   const supabase = createServiceClient()
   const { data: respondent } = await supabase
     .from('survey_respondents')
-    .select('id, email, nombre, status, campaign_id, survey_campaigns(nombre, empresa, tipo, descripcion)')
+    .select('id, email, nombre, status, campaign_id, survey_campaigns(nombre, empresa, tipo, descripcion, survey_config)')
     .eq('token', params.token)
     .single()
 
@@ -30,16 +30,21 @@ export default async function SurveyPage({ params }: { params: { token: string }
   }
 
   const rawC = respondent.survey_campaigns
-  const campaign = (rawC && !Array.isArray(rawC))
-    ? (rawC as { nombre: string; empresa: string; tipo: string; descripcion?: string })
+  const campaignData = (rawC && !Array.isArray(rawC))
+    ? (rawC as { nombre: string; empresa: string; tipo: string; descripcion?: string; survey_config?: unknown })
     : null
+
+  const campaign = campaignData
+    ? { nombre: campaignData.nombre, empresa: campaignData.empresa, tipo: campaignData.tipo, descripcion: campaignData.descripcion }
+    : { nombre: 'Diagnóstico IA', empresa: 'Human.AiX', tipo: 'pre' }
 
   return (
     <SurveyForm
       respondentId={respondent.id}
       email={respondent.email}
       nombre={respondent.nombre ?? ''}
-      campaign={campaign ?? { nombre: 'Diagnóstico IA', empresa: 'Human.AiX', tipo: 'pre' }}
+      campaign={campaign}
+      surveyConfig={campaignData?.survey_config}
     />
   )
 }

@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
-import { SURVEY_SECTIONS, Question, Answers, ROLE_LABELS } from '@/lib/survey-config'
+import { Question, Answers, ROLE_LABELS } from '@/lib/survey-config'
+import { resolveSurveyConfig, isCustomConfig } from '@/lib/survey-config-json'
 
 interface Campaign { nombre: string; empresa: string; tipo: string; descripcion?: string }
-interface Props { respondentId: string; email: string; nombre: string; campaign: Campaign }
+interface Props { respondentId: string; email: string; nombre: string; campaign: Campaign; surveyConfig?: unknown }
 
 const P = '#7C3AED'
 const PG = 'linear-gradient(135deg,#7C3AED,#D946EF)'
@@ -16,11 +17,11 @@ const LS_KEY = (id: string) => `survey_draft_${id}`
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function visibleQs(section: typeof SURVEY_SECTIONS[0], answers: Answers) {
+function visibleQs(section: { id: string; title: string; subtitle?: string; questions: Question[] }, answers: Answers) {
   return section.questions.filter(q => !q.showIf || q.showIf(answers))
 }
 
-function isSectionValid(section: typeof SURVEY_SECTIONS[0], answers: Answers): boolean {
+function isSectionValid(section: { id: string; title: string; subtitle?: string; questions: Question[] }, answers: Answers): boolean {
   return visibleQs(section, answers).every(q => {
     if (!q.required) return true
     const val = answers[q.column]
@@ -198,7 +199,9 @@ function QuestionBlock({ q, answers, onChange }: { q: Question; answers: Answers
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function SurveyForm({ respondentId, email, nombre: initialNombre, campaign }: Props) {
+export default function SurveyForm({ respondentId, email, nombre: initialNombre, campaign, surveyConfig }: Props) {
+  const sections = resolveSurveyConfig(surveyConfig)
+  const isCustom = isCustomConfig(surveyConfig)
   // -1 = welcome, 0..N-1 = sections, N = done
   const [sectionIdx, setSectionIdx] = useState(-1)
   const [answers, setAnswers] = useState<Answers>(() => {
@@ -222,8 +225,8 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
 
   const setAnswer = (col: string, val: unknown) => setAnswers(prev => ({ ...prev, [col]: val }))
 
-  const TOTAL = SURVEY_SECTIONS.length
-  const currentSection = sectionIdx >= 0 && sectionIdx < TOTAL ? SURVEY_SECTIONS[sectionIdx] : null
+  const TOTAL = sections.length
+  const currentSection = sectionIdx >= 0 && sectionIdx < TOTAL ? sections[sectionIdx] : null
   const canNext = currentSection ? isSectionValid(currentSection, answers) : true
   const pct = sectionIdx < 0 ? 0 : Math.round(((sectionIdx) / TOTAL) * 100)
 
@@ -332,7 +335,7 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
 
   // ── Section screen ───────────────────────────────────────────────────────────
   const isLastSection = sectionIdx === TOTAL - 1
-  const section = SURVEY_SECTIONS[sectionIdx]
+  const section = sections[sectionIdx]
   const qs = visibleQs(section, answers)
   const sectionNum = String(sectionIdx + 1).padStart(2, '0')
 
@@ -358,8 +361,8 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
           <p style={{ color: '#9CA3AF', fontSize: 14, margin: '0 0 28px' }}>{section.subtitle}</p>
         )}
 
-        {/* Role-specific section notice */}
-        {section.id === 'role_specific' && (
+        {/* Role-specific section notice (default survey only) */}
+        {!isCustom && section.id === 'role_specific' && (
           <div style={{ background: PL, border: `1px solid ${PB}`, borderRadius: 12, padding: '12px 16px', marginBottom: 24 }}>
             <p style={{ color: P, fontSize: 13, margin: 0 }}>
               Mostrando preguntas para: <strong>{ROLE_LABELS[answers.participant_role as string] ?? 'tu función'}</strong>
