@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('survey_respondents')
-    .select('id, email, nombre, token, status, sent_at, completed_at, created_at, survey_responses(profile_name, profile_score, answers, completion_time_seconds, diagnostic_html)')
+    .select('id, email, nombre, token, status, sent_at, completed_at, created_at, survey_responses!survey_responses_respondent_id_fkey(profile_name, profile_score, answers, completion_time_seconds, diagnostic_html)')
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: false })
 
