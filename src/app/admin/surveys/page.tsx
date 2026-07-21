@@ -16,8 +16,11 @@ interface SurveyResponse {
   profile_name?: string
   profile_score?: number
   answers?: Record<string, unknown>
+  scores?: Record<string, number>
   completion_time_seconds?: number
   diagnostic_html?: string
+  possible_ai_champion?: boolean
+  recommended_level?: string
 }
 interface Respondent {
   id: string; email: string; nombre?: string; token: string
@@ -47,18 +50,26 @@ function StatusChip({ status }: { status: string }) {
   return <span style={{ background: color + '18', color, border: `1px solid ${color}40`, fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>{label}</span>
 }
 
-const BARRIER_LABELS: Record<string, string> = {
-  no_se_como: 'No sé cómo empezar',
-  no_confio: 'No confío en los resultados',
-  falta_tiempo: 'Falta de tiempo',
-  confidencialidad: 'Seguridad / confidencialidad',
-  no_acceso: 'Sin acceso o licencia',
-  no_caso_uso: 'Sin casos de uso identificados',
-  ninguna: 'Sin barreras',
-}
 const FREQ_LABELS: Record<string, string> = {
+  // old schema
   nunca: 'Nunca', una_dos: 'Una o dos veces', mensual: 'Algunas veces al mes',
   semanal: 'Varias veces/semana', diario: 'Diariamente', flujo: 'Parte integral del flujo',
+  // new schema
+  never: 'Nunca', tried_once_or_twice: 'Una o dos veces', monthly: 'Algunas veces al mes',
+  weekly: 'Varias veces/semana', daily: 'Diariamente', embedded_in_workflow: 'Parte integral del flujo',
+}
+const ROLE_LABELS: Record<string, string> = {
+  developer: 'Desarrollador/a', architect: 'Arquitecto/a', functional: 'Analista funcional',
+  tech_lead: 'Líder técnico', other_tech: 'Otro perfil tecnológico',
+}
+const COURSE_LEVEL_LABELS: Record<string, string> = {
+  foundational: 'Fundamentos de IA', intermediate: 'Uso avanzado y flujos', advanced: 'Estrategia y agentes IA',
+}
+const DIMENSION_LABELS: Record<string, string> = {
+  ai_adoption: 'Adopción IA', tool_exposure: 'Exposición a herramientas',
+  context_engineering: 'Ingeniería de contexto', specification_maturity: 'Madurez de especificación',
+  documentation_maturity: 'Madurez de documentación', agent_readiness: 'Preparación para agentes',
+  team_adoption: 'Adopción en equipo', ai_leadership: 'Liderazgo IA', change_readiness: 'Disposición al cambio',
 }
 
 function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; onClose: () => void }) {
@@ -75,13 +86,12 @@ function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; 
     a.click()
   }
 
-  const barreras: string[] = Array.isArray(answers?.barreras)
-    ? answers.barreras as string[]
-    : answers?.barrera ? [answers.barrera as string] : []
+  // Support both old (barreras/herramientas) and new (primary_ai_adoption_barrier/ai_tools_used) schemas
+  const herramientas: string[] = Array.isArray(answers?.ai_tools_used)
+    ? (answers.ai_tools_used as string[]).filter(t => t !== 'none')
+    : Array.isArray(answers?.herramientas) ? answers.herramientas as string[] : []
 
-  const herramientas: string[] = Array.isArray(answers?.herramientas)
-    ? answers.herramientas as string[]
-    : []
+  const isNewSchema = !!(answers?.participant_name || answers?.participant_role)
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
@@ -121,8 +131,60 @@ function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; 
             </div>
           ) : (
             <>
-              {/* Perfil */}
-              {answers && (
+              {/* New schema fields */}
+              {isNewSchema && answers && (
+                <>
+                  {/* Role + experience */}
+                  <div style={{ marginBottom: 20 }}>
+                    <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Perfil profesional</p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {answers.participant_role != null && <span style={{ background: PL, color: P, fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 600 }}>{ROLE_LABELS[String(answers.participant_role)] ?? String(answers.participant_role)}</span>}
+                      {answers.technology_experience_range != null && <span style={{ background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0', fontSize: 12, padding: '4px 12px', borderRadius: 20 }}>{String(answers.technology_experience_range).replace(/_/g, ' ')}</span>}
+                      {resp?.recommended_level && <span style={{ background: '#FFF7ED', color: '#EA580C', border: '1px solid #FED7AA', fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 600 }}>{COURSE_LEVEL_LABELS[resp.recommended_level] ?? resp.recommended_level}</span>}
+                      {resp?.possible_ai_champion && <span style={{ background: '#FFF7ED', color: '#EA580C', border: '1px solid #FED7AA', fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 700 }}>⚡ AI Champion</span>}
+                    </div>
+                  </div>
+
+                  {/* Score dimensions */}
+                  {resp?.scores && Object.keys(resp.scores).length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Dimensiones de adopción</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {Object.entries(resp.scores).map(([k, v]) => (
+                          <div key={k} style={{ background: '#F9FAFB', borderRadius: 8, padding: '8px 12px' }}>
+                            <p style={{ color: '#9CA3AF', fontSize: 10, margin: '0 0 4px' }}>{DIMENSION_LABELS[k] ?? k}</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ flex: 1, height: 6, background: '#E9D5FF', borderRadius: 4, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', background: 'linear-gradient(90deg,#7C3AED,#D946EF)', width: `${v}%`, borderRadius: 4 }} />
+                              </div>
+                              <span style={{ color: P, fontSize: 11, fontWeight: 700, minWidth: 28 }}>{v}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Frequent task */}
+                  {answers.frequent_time_consuming_task && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Tarea frecuente</p>
+                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '14px', fontSize: 13, color: '#374151', lineHeight: 1.7 }}>{String(answers.frequent_time_consuming_task)}</div>
+                    </div>
+                  )}
+
+                  {/* Course expectation */}
+                  {answers.course_value_expectation && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Expectativa del curso</p>
+                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '14px', fontSize: 13, color: '#374151', lineHeight: 1.7 }}>{String(answers.course_value_expectation)}</div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Old schema fields */}
+              {!isNewSchema && answers && (
                 <>
                   {(answers.puesto || answers.departamento || answers.role) && (
                     <div style={{ marginBottom: 20 }}>
@@ -134,53 +196,12 @@ function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; 
                       </div>
                     </div>
                   )}
-
-                  {/* Uso de IA */}
-                  <div style={{ marginBottom: 20 }}>
-                    <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Uso de IA</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '12px 14px' }}>
-                        <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 4px' }}>Frecuencia</p>
-                        <p style={{ color: '#111827', fontSize: 13, fontWeight: 600, margin: 0 }}>{FREQ_LABELS[answers.frecuencia as string] ?? (answers.frecuencia as string) ?? '—'}</p>
-                      </div>
-                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '12px 14px' }}>
-                        <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 4px' }}>Confianza</p>
-                        <p style={{ color: '#111827', fontSize: 13, fontWeight: 600, margin: 0 }}>{answers.confianza ? `${answers.confianza} / 5` : '—'}</p>
-                      </div>
-                    </div>
-                    {herramientas.length > 0 && (
-                      <div style={{ marginTop: 10 }}>
-                        <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 6px' }}>Herramientas usadas</p>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {herramientas.map(h => (
-                            <span key={h} style={{ background: PL, color: P, fontSize: 12, padding: '3px 10px', borderRadius: 16, fontWeight: 600 }}>{h}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Barreras */}
-                  {barreras.length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Barreras</p>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {barreras.map(b => (
-                          <span key={b} style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', fontSize: 12, padding: '3px 10px', borderRadius: 16 }}>{BARRIER_LABELS[b] ?? b}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tarea frecuente */}
                   {answers.tareaFrecuente && (
                     <div style={{ marginBottom: 20 }}>
                       <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Tarea frecuente</p>
                       <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '14px', fontSize: 13, color: '#374151', lineHeight: 1.7 }}>{String(answers.tareaFrecuente)}</div>
                     </div>
                   )}
-
-                  {/* Expectativa */}
                   {answers.expectativa && (
                     <div style={{ marginBottom: 24 }}>
                       <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Expectativa del curso</p>
@@ -188,6 +209,33 @@ function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; 
                     </div>
                   )}
                 </>
+              )}
+
+              {/* Uso de IA (both schemas) */}
+              {answers && (
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Uso de IA</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '12px 14px' }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 4px' }}>Frecuencia</p>
+                      <p style={{ color: '#111827', fontSize: 13, fontWeight: 600, margin: 0 }}>{FREQ_LABELS[answers.ai_usage_frequency as string ?? answers.frecuencia as string] ?? String(answers.ai_usage_frequency ?? answers.frecuencia ?? '—')}</p>
+                    </div>
+                    <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '12px 14px' }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 4px' }}>Confianza</p>
+                      <p style={{ color: '#111827', fontSize: 13, fontWeight: 600, margin: 0 }}>{(answers.ai_confidence_level ?? answers.confianza) ? `${answers.ai_confidence_level ?? answers.confianza} / 5` : '—'}</p>
+                    </div>
+                  </div>
+                  {herramientas.length > 0 && (
+                    <div>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 6px' }}>Herramientas usadas</p>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {herramientas.map(h => (
+                          <span key={h} style={{ background: PL, color: P, fontSize: 12, padding: '3px 10px', borderRadius: 16, fontWeight: 600 }}>{h}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Acciones */}
@@ -396,18 +444,28 @@ export default function SurveysAdmin() {
   const exportCSV = (campaignId: string) => {
     const rs = respondents[campaignId] ?? []
     const rows = [
-      ['Email', 'Nombre', 'Puesto', 'Departamento', 'Status', 'Perfil IA', 'Score', 'Frecuencia', 'Herramientas', 'Confianza', 'Barreras', 'Enviado', 'Completado', 'Tiempo (min)', 'URL personal'],
+      ['Email', 'Nombre', 'Función', 'Experiencia', 'Status', 'Perfil IA', 'Score', 'Nivel Curso', 'AI Champion', 'Frecuencia', 'Herramientas', 'Confianza', 'Barrera', 'Enviado', 'Completado', 'Tiempo (min)', 'URL personal'],
       ...rs.map(r => {
         const resp = getResp(r)
         const ans = resp?.answers as Record<string, unknown> | undefined
-        const herramientas = Array.isArray(ans?.herramientas) ? (ans.herramientas as string[]).join('; ') : ''
-        const barreras = Array.isArray(ans?.barreras) ? (ans.barreras as string[]).map(b => BARRIER_LABELS[b] ?? b).join('; ') : ans?.barrera ? String(ans.barrera) : ''
+        const isNew = !!(ans?.participant_name || ans?.participant_role)
+        const herramientas = Array.isArray(ans?.ai_tools_used)
+          ? (ans.ai_tools_used as string[]).filter(t => t !== 'none').join('; ')
+          : Array.isArray(ans?.herramientas) ? (ans.herramientas as string[]).join('; ') : ''
+        const barrera = isNew
+          ? String(ans?.primary_ai_adoption_barrier ?? '')
+          : Array.isArray(ans?.barreras) ? (ans.barreras as string[]).join('; ') : String(ans?.barrera ?? '')
+        const frecuencia = String(ans?.ai_usage_frequency ?? ans?.frecuencia ?? '')
+        const confianza = String(ans?.ai_confidence_level ?? ans?.confianza ?? '')
+        const funcion = isNew ? (ROLE_LABELS[ans?.participant_role as string] ?? '') : String(ans?.role ?? ans?.puesto ?? '')
+        const experiencia = String(ans?.technology_experience_range ?? ans?.departamento ?? '')
         const mins = resp?.completion_time_seconds ? Math.round(resp.completion_time_seconds / 60) : ''
         return [
-          r.email, r.nombre ?? '', ans?.puesto ?? '', ans?.departamento ?? '', r.status,
+          r.email, r.nombre ?? '', funcion, experiencia, r.status,
           resp?.profile_name ?? '', resp?.profile_score?.toString() ?? '',
-          ans?.frecuencia ?? '', herramientas, ans?.confianza?.toString() ?? '',
-          barreras,
+          COURSE_LEVEL_LABELS[resp?.recommended_level ?? ''] ?? resp?.recommended_level ?? '',
+          resp?.possible_ai_champion ? 'Sí' : '',
+          FREQ_LABELS[frecuencia] ?? frecuencia, herramientas, confianza, barrera,
           r.sent_at ? new Date(r.sent_at).toLocaleString('es-MX') : '',
           r.completed_at ? new Date(r.completed_at).toLocaleString('es-MX') : '',
           mins.toString(),
