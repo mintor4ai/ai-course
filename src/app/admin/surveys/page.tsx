@@ -22,10 +22,16 @@ interface SurveyResponse {
 interface Respondent {
   id: string; email: string; nombre?: string; token: string
   status: string; sent_at?: string; completed_at?: string
-  survey_responses?: SurveyResponse[]
+  survey_responses?: SurveyResponse[] | SurveyResponse | null
 }
 
 function buildAuth(pw: string) { return 'Basic ' + btoa(`admin:${pw}`) }
+
+function getResp(r: Respondent): SurveyResponse | undefined {
+  if (!r.survey_responses) return undefined
+  if (Array.isArray(r.survey_responses)) return r.survey_responses[0]
+  return r.survey_responses as SurveyResponse
+}
 
 function StatusChip({ status }: { status: string }) {
   const map: Record<string, [string, string]> = {
@@ -56,7 +62,7 @@ const FREQ_LABELS: Record<string, string> = {
 }
 
 function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; onClose: () => void }) {
-  const resp = r.survey_responses?.[0]
+  const resp = getResp(r)
   const answers = resp?.answers as Record<string, unknown> | undefined
   const mins = resp?.completion_time_seconds ? Math.round(resp.completion_time_seconds / 60) : null
 
@@ -392,7 +398,7 @@ export default function SurveysAdmin() {
     const rows = [
       ['Email', 'Nombre', 'Puesto', 'Departamento', 'Status', 'Perfil IA', 'Score', 'Frecuencia', 'Herramientas', 'Confianza', 'Barreras', 'Enviado', 'Completado', 'Tiempo (min)', 'URL personal'],
       ...rs.map(r => {
-        const resp = r.survey_responses?.[0]
+        const resp = getResp(r)
         const ans = resp?.answers as Record<string, unknown> | undefined
         const herramientas = Array.isArray(ans?.herramientas) ? (ans.herramientas as string[]).join('; ') : ''
         const barreras = Array.isArray(ans?.barreras) ? (ans.barreras as string[]).map(b => BARRIER_LABELS[b] ?? b).join('; ') : ans?.barrera ? String(ans.barrera) : ''
@@ -494,7 +500,7 @@ export default function SurveysAdmin() {
             const total = rs.length
             const pct = total ? Math.round(completed / total * 100) : 0
             const profileCounts = PROFILES.reduce((acc, p) => {
-              acc[p] = rs.filter(r => r.survey_responses?.[0]?.profile_name === p).length
+              acc[p] = rs.filter(r => getResp(r)?.profile_name === p).length
               return acc
             }, {} as Record<string, number>)
 
@@ -602,11 +608,11 @@ export default function SurveysAdmin() {
                                 <td style={{ padding: '12px 16px', color: '#374151' }}>{r.nombre ?? '—'}</td>
                                 <td style={{ padding: '12px 16px' }}><StatusChip status={r.status} /></td>
                                 <td style={{ padding: '12px 16px', fontWeight: 600 }}>
-                                  {r.survey_responses?.[0]?.profile_name
-                                    ? <span style={{ color: PROFILE_COLORS[r.survey_responses[0].profile_name] ?? P }}>{r.survey_responses[0].profile_name}</span>
+                                  {getResp(r)?.profile_name
+                                    ? <span style={{ color: PROFILE_COLORS[getResp(r)!.profile_name!] ?? P }}>{getResp(r)!.profile_name}</span>
                                     : <span style={{ color: '#9CA3AF' }}>—</span>}
                                 </td>
-                                <td style={{ padding: '12px 16px', color: '#6B7280' }}>{r.survey_responses?.[0]?.profile_score != null ? `${r.survey_responses[0].profile_score}%` : '—'}</td>
+                                <td style={{ padding: '12px 16px', color: '#6B7280' }}>{getResp(r)?.profile_score != null ? `${getResp(r)!.profile_score}%` : '—'}</td>
                                 <td style={{ padding: '12px 16px', color: '#9CA3AF', fontSize: 12 }}>
                                   {r.completed_at ? new Date(r.completed_at).toLocaleDateString('es-MX') : '—'}
                                 </td>
