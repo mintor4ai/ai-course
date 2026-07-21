@@ -12,10 +12,17 @@ interface Campaign {
   id: string; nombre: string; empresa: string; tipo: string
   descripcion?: string; status: string; created_at: string
 }
+interface SurveyResponse {
+  profile_name?: string
+  profile_score?: number
+  answers?: Record<string, unknown>
+  completion_time_seconds?: number
+  diagnostic_html?: string
+}
 interface Respondent {
   id: string; email: string; nombre?: string; token: string
   status: string; sent_at?: string; completed_at?: string
-  survey_responses?: { profile_name?: string; profile_score?: number }[]
+  survey_responses?: SurveyResponse[]
 }
 
 function buildAuth(pw: string) { return 'Basic ' + btoa(`admin:${pw}`) }
@@ -32,6 +39,176 @@ function StatusChip({ status }: { status: string }) {
   }
   const [color, label] = map[status] ?? ['#9CA3AF', status]
   return <span style={{ background: color + '18', color, border: `1px solid ${color}40`, fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>{label}</span>
+}
+
+const BARRIER_LABELS: Record<string, string> = {
+  no_se_como: 'No sé cómo empezar',
+  no_confio: 'No confío en los resultados',
+  falta_tiempo: 'Falta de tiempo',
+  confidencialidad: 'Seguridad / confidencialidad',
+  no_acceso: 'Sin acceso o licencia',
+  no_caso_uso: 'Sin casos de uso identificados',
+  ninguna: 'Sin barreras',
+}
+const FREQ_LABELS: Record<string, string> = {
+  nunca: 'Nunca', una_dos: 'Una o dos veces', mensual: 'Algunas veces al mes',
+  semanal: 'Varias veces/semana', diario: 'Diariamente', flujo: 'Parte integral del flujo',
+}
+
+function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; onClose: () => void }) {
+  const resp = r.survey_responses?.[0]
+  const answers = resp?.answers as Record<string, unknown> | undefined
+  const mins = resp?.completion_time_seconds ? Math.round(resp.completion_time_seconds / 60) : null
+
+  const downloadDiagnostic = () => {
+    if (!resp?.diagnostic_html) return
+    const blob = new Blob([resp.diagnostic_html], { type: 'text/html;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `diagnostico-${(r.nombre ?? r.email).replace(/\s+/g, '-')}.html`
+    a.click()
+  }
+
+  const barreras: string[] = Array.isArray(answers?.barreras)
+    ? answers.barreras as string[]
+    : answers?.barrera ? [answers.barrera as string] : []
+
+  const herramientas: string[] = Array.isArray(answers?.herramientas)
+    ? answers.herramientas as string[]
+    : []
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 20, maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(124,58,237,0.25)' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ background: PG, borderRadius: '20px 20px 0 0', padding: '24px 28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, margin: '0 0 4px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Detalle de participante</p>
+              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>{r.nombre ?? r.email}</h2>
+              {r.nombre && <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, margin: 0 }}>{r.email}</p>}
+            </div>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+            <StatusChip status={r.status} />
+            {resp?.profile_name && (
+              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>{resp.profile_name}</span>
+            )}
+            {resp?.profile_score != null && (
+              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>Score: {resp.profile_score}%</span>
+            )}
+            {mins != null && (
+              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20 }}>{mins} min</span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ padding: '24px 28px' }}>
+          {r.status !== 'completed' ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF' }}>
+              <p style={{ fontSize: 32, margin: '0 0 12px' }}>⏳</p>
+              <p style={{ margin: 0 }}>Este participante aún no ha completado la encuesta.</p>
+              <p style={{ margin: '8px 0 0', fontSize: 12 }}>
+                URL personal: <a href={`${baseUrl}/s/${r.token}`} target="_blank" rel="noreferrer" style={{ color: P }}>{baseUrl}/s/{r.token}</a>
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Perfil */}
+              {answers && (
+                <>
+                  {(answers.puesto || answers.departamento || answers.role) && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Perfil profesional</p>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {[answers.puesto, answers.departamento, answers.role].filter(Boolean).map((v, i) => (
+                          <span key={i} style={{ background: PL, color: P, fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 600 }}>{String(v)}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Uso de IA */}
+                  <div style={{ marginBottom: 20 }}>
+                    <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Uso de IA</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '12px 14px' }}>
+                        <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 4px' }}>Frecuencia</p>
+                        <p style={{ color: '#111827', fontSize: 13, fontWeight: 600, margin: 0 }}>{FREQ_LABELS[answers.frecuencia as string] ?? (answers.frecuencia as string) ?? '—'}</p>
+                      </div>
+                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '12px 14px' }}>
+                        <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 4px' }}>Confianza</p>
+                        <p style={{ color: '#111827', fontSize: 13, fontWeight: 600, margin: 0 }}>{answers.confianza ? `${answers.confianza} / 5` : '—'}</p>
+                      </div>
+                    </div>
+                    {herramientas.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <p style={{ color: '#9CA3AF', fontSize: 11, margin: '0 0 6px' }}>Herramientas usadas</p>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {herramientas.map(h => (
+                            <span key={h} style={{ background: PL, color: P, fontSize: 12, padding: '3px 10px', borderRadius: 16, fontWeight: 600 }}>{h}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Barreras */}
+                  {barreras.length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Barreras</p>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {barreras.map(b => (
+                          <span key={b} style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', fontSize: 12, padding: '3px 10px', borderRadius: 16 }}>{BARRIER_LABELS[b] ?? b}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tarea frecuente */}
+                  {answers.tareaFrecuente && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Tarea frecuente</p>
+                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '14px', fontSize: 13, color: '#374151', lineHeight: 1.7 }}>{String(answers.tareaFrecuente)}</div>
+                    </div>
+                  )}
+
+                  {/* Expectativa */}
+                  {answers.expectativa && (
+                    <div style={{ marginBottom: 24 }}>
+                      <p style={{ color: '#9CA3AF', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '0 0 10px' }}>Expectativa del curso</p>
+                      <div style={{ background: '#F9FAFB', borderRadius: 10, padding: '14px', fontSize: 13, color: '#374151', lineHeight: 1.7 }}>{String(answers.expectativa)}</div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Acciones */}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {resp?.diagnostic_html && (
+                  <button onClick={downloadDiagnostic}
+                    style={{ flex: 1, padding: '12px', border: 'none', borderRadius: 12, background: PG, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', minWidth: 160 }}>
+                    ⬇ Descargar diagnóstico
+                  </button>
+                )}
+                <button onClick={() => navigator.clipboard.writeText(`${baseUrl}/s/${r.token}`)}
+                  style={{ padding: '12px 20px', border: `1.5px solid ${PB}`, borderRadius: 12, background: PL, color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Copiar URL
+                </button>
+              </div>
+
+              {r.completed_at && (
+                <p style={{ color: '#9CA3AF', fontSize: 11, textAlign: 'center', marginTop: 16, margin: '16px 0 0' }}>
+                  Completado el {new Date(r.completed_at).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function ImportModal({ campaignId, auth, onClose, onDone }: { campaignId: string; auth: string; onClose: () => void; onDone: () => void }) {
@@ -142,6 +319,14 @@ function CreateModal({ auth, onClose, onCreated }: { auth: string; onClose: () =
   )
 }
 
+const PROFILES = ['AI Explorer', 'AI Practitioner', 'AI Strategist', 'AI Catalyst Leader']
+const PROFILE_COLORS: Record<string, string> = {
+  'AI Explorer': '#9CA3AF',
+  'AI Practitioner': '#3B82F6',
+  'AI Strategist': '#8B5CF6',
+  'AI Catalyst Leader': '#D946EF',
+}
+
 export default function SurveysAdmin() {
   const [authed, setAuthed] = useState(false)
   const [auth, setAuth] = useState('')
@@ -155,6 +340,7 @@ export default function SurveysAdmin() {
   const [showCreate, setShowCreate] = useState(false)
   const [importCampaignId, setImportCampaignId] = useState<string | null>(null)
   const [inviting, setInviting] = useState<string | null>(null)
+  const [selectedRespondent, setSelectedRespondent] = useState<Respondent | null>(null)
   const [baseUrl, setBaseUrl] = useState('')
 
   useEffect(() => { setBaseUrl(window.location.origin) }, [])
@@ -204,15 +390,24 @@ export default function SurveysAdmin() {
   const exportCSV = (campaignId: string) => {
     const rs = respondents[campaignId] ?? []
     const rows = [
-      ['Email', 'Nombre', 'Status', 'Enviado', 'Completado', 'Perfil IA', 'Score', 'URL personal'],
-      ...rs.map(r => [
-        r.email, r.nombre ?? '', r.status,
-        r.sent_at ? new Date(r.sent_at).toLocaleString('es-MX') : '',
-        r.completed_at ? new Date(r.completed_at).toLocaleString('es-MX') : '',
-        r.survey_responses?.[0]?.profile_name ?? '',
-        r.survey_responses?.[0]?.profile_score?.toString() ?? '',
-        `${baseUrl}/s/${r.token}`,
-      ])
+      ['Email', 'Nombre', 'Puesto', 'Departamento', 'Status', 'Perfil IA', 'Score', 'Frecuencia', 'Herramientas', 'Confianza', 'Enviado', 'Completado', 'Tiempo (min)', 'URL personal'],
+      ...rs.map(r => {
+        const resp = r.survey_responses?.[0]
+        const ans = resp?.answers as Record<string, unknown> | undefined
+        const herramientas = Array.isArray(ans?.herramientas) ? (ans.herramientas as string[]).join('; ') : ''
+        const barreras = Array.isArray(ans?.barreras) ? (ans.barreras as string[]).map(b => BARRIER_LABELS[b] ?? b).join('; ') : ans?.barrera ? String(ans.barrera) : ''
+        const mins = resp?.completion_time_seconds ? Math.round(resp.completion_time_seconds / 60) : ''
+        return [
+          r.email, r.nombre ?? '', ans?.puesto ?? '', ans?.departamento ?? '', r.status,
+          resp?.profile_name ?? '', resp?.profile_score?.toString() ?? '',
+          ans?.frecuencia ?? '', herramientas, ans?.confianza?.toString() ?? '',
+          barreras,
+          r.sent_at ? new Date(r.sent_at).toLocaleString('es-MX') : '',
+          r.completed_at ? new Date(r.completed_at).toLocaleString('es-MX') : '',
+          mins.toString(),
+          `${baseUrl}/s/${r.token}`,
+        ]
+      })
     ]
     const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const a = document.createElement('a')
@@ -266,7 +461,7 @@ export default function SurveysAdmin() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '28px 20px' }}>
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 24, background: '#F3F4F6', borderRadius: 12, padding: 4, width: 'fit-content' }}>
           {([['all', 'Todas'], ['pre', '📋 Pre-curso'], ['post', '🎯 Post-curso']] as const).map(([v, l]) => (
@@ -298,6 +493,10 @@ export default function SurveysAdmin() {
             const completed = rs.filter(r => r.status === 'completed').length
             const total = rs.length
             const pct = total ? Math.round(completed / total * 100) : 0
+            const profileCounts = PROFILES.reduce((acc, p) => {
+              acc[p] = rs.filter(r => r.survey_responses?.[0]?.profile_name === p).length
+              return acc
+            }, {} as Record<string, number>)
 
             return (
               <div key={c.id} style={{ background: '#fff', border: `1px solid ${expanded === c.id ? PB : '#E5E7EB'}`, borderRadius: 16, overflow: 'hidden', boxShadow: expanded === c.id ? `0 4px 20px rgba(124,58,237,0.1)` : 'none' }}>
@@ -360,6 +559,24 @@ export default function SurveysAdmin() {
                       </div>
                     </div>
 
+                    {/* Profile distribution */}
+                    {completed > 0 && (
+                      <div style={{ padding: '16px 24px', borderBottom: '1px solid #F3F4F6', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        <p style={{ color: '#9CA3AF', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 8px 0 0', alignSelf: 'center' }}>Perfiles:</p>
+                        {PROFILES.map(p => {
+                          const count = profileCounts[p]
+                          if (!count) return null
+                          return (
+                            <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: PROFILE_COLORS[p], display: 'inline-block' }} />
+                              <span style={{ color: PROFILE_COLORS[p], fontSize: 12, fontWeight: 700 }}>{count}</span>
+                              <span style={{ color: '#6B7280', fontSize: 12 }}>{p}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
                     {/* Respondents table */}
                     {rs.length === 0 ? (
                       <div style={{ padding: '32px 24px', textAlign: 'center', color: '#9CA3AF' }}>
@@ -370,24 +587,31 @@ export default function SurveysAdmin() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                           <thead>
                             <tr style={{ background: '#FAFAFA', borderBottom: '1px solid #F3F4F6' }}>
-                              {['Email', 'Nombre', 'Status', 'Perfil IA', 'Score', 'URL personal'].map(h => (
+                              {['Email', 'Nombre', 'Status', 'Perfil IA', 'Score', 'Completado', ''].map(h => (
                                 <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#9CA3AF', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>{h}</th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
                             {rs.map(r => (
-                              <tr key={r.id} style={{ borderBottom: '1px solid #F9FAFB' }}>
+                              <tr key={r.id} style={{ borderBottom: '1px solid #F9FAFB', cursor: 'pointer' }}
+                                onClick={() => setSelectedRespondent(r)}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#FAFAFA')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '')}>
                                 <td style={{ padding: '12px 16px', color: '#374151' }}>{r.email}</td>
                                 <td style={{ padding: '12px 16px', color: '#374151' }}>{r.nombre ?? '—'}</td>
                                 <td style={{ padding: '12px 16px' }}><StatusChip status={r.status} /></td>
-                                <td style={{ padding: '12px 16px', color: P, fontWeight: 600 }}>{r.survey_responses?.[0]?.profile_name ?? '—'}</td>
+                                <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                                  {r.survey_responses?.[0]?.profile_name
+                                    ? <span style={{ color: PROFILE_COLORS[r.survey_responses[0].profile_name] ?? P }}>{r.survey_responses[0].profile_name}</span>
+                                    : <span style={{ color: '#9CA3AF' }}>—</span>}
+                                </td>
                                 <td style={{ padding: '12px 16px', color: '#6B7280' }}>{r.survey_responses?.[0]?.profile_score != null ? `${r.survey_responses[0].profile_score}%` : '—'}</td>
+                                <td style={{ padding: '12px 16px', color: '#9CA3AF', fontSize: 12 }}>
+                                  {r.completed_at ? new Date(r.completed_at).toLocaleDateString('es-MX') : '—'}
+                                </td>
                                 <td style={{ padding: '12px 16px' }}>
-                                  <button onClick={() => navigator.clipboard.writeText(`${baseUrl}/s/${r.token}`)}
-                                    style={{ padding: '4px 12px', border: `1px solid ${PB}`, borderRadius: 8, background: PL, color: P, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-                                    Copiar URL
-                                  </button>
+                                  <span style={{ color: P, fontSize: 12, fontWeight: 600 }}>Ver detalle →</span>
                                 </td>
                               </tr>
                             ))}
@@ -410,6 +634,13 @@ export default function SurveysAdmin() {
           auth={auth}
           onClose={() => setImportCampaignId(null)}
           onDone={() => { fetchRespondents(importCampaignId); setImportCampaignId(null) }}
+        />
+      )}
+      {selectedRespondent && (
+        <DetailModal
+          r={selectedRespondent}
+          baseUrl={baseUrl}
+          onClose={() => setSelectedRespondent(null)}
         />
       )}
     </main>
