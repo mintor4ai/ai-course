@@ -169,47 +169,77 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
           <div>
             <p style={{ color: P, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 8px' }}>02 · Uso actual de IA</p>
             <h2 style={{ color: '#111827', fontSize: 22, fontWeight: 800, margin: '0 0 24px' }}>¿Cómo usas la IA hoy?</h2>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', color: '#374151', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>¿Con qué frecuencia usas herramientas de IA en tu trabajo?</label>
+
+            {/* Frecuencia — opción única */}
+            <div style={{ marginBottom: 28 }}>
+              <label style={{ display: 'block', color: '#374151', fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
+                ¿Con qué frecuencia usas herramientas de IA en tu trabajo?
+              </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {FRECUENCIAS.map(f => (
-                  <button key={f.v} onClick={() => setFrecuencia(f.v)}
-                    style={{ textAlign: 'left', padding: '12px 16px', borderRadius: 10, border: `1.5px solid ${frecuencia === f.v ? P : '#E5E7EB'}`, background: frecuencia === f.v ? PL : '#fff', color: frecuencia === f.v ? P : '#374151', fontWeight: frecuencia === f.v ? 700 : 400, fontSize: 14, cursor: 'pointer' }}>
-                    {frecuencia === f.v ? '✓ ' : ''}{f.l}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', color: '#374151', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>¿Qué herramientas has usado? (selecciona todas las que apliquen)</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {HERRAMIENTAS.map(h => {
-                  const sel = herramientas.includes(h)
+                {FRECUENCIAS.map(f => {
+                  const sel = frecuencia === f.v
                   return (
-                    <button key={h} onClick={() => toggleHerramienta(h)}
-                      style={{ padding: '8px 16px', borderRadius: 20, border: `1.5px solid ${sel ? P : '#E5E7EB'}`, background: sel ? PL : '#fff', color: sel ? P : '#6B7280', fontWeight: sel ? 700 : 400, fontSize: 13, cursor: 'pointer' }}>
-                      {sel ? '✓ ' : ''}{h}
+                    <button key={f.v} onClick={() => setFrecuencia(f.v)}
+                      style={{ textAlign: 'left', padding: '13px 16px', borderRadius: 10, border: `2px solid ${sel ? P : '#E5E7EB'}`, background: sel ? PL : '#fff', color: sel ? P : '#374151', fontWeight: sel ? 700 : 400, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? P : '#D1D5DB'}`, background: sel ? P : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {sel && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff', display: 'block' }} />}
+                      </span>
+                      {f.l}
                     </button>
                   )
                 })}
               </div>
             </div>
-            <div>
-              <label style={{ display: 'block', color: '#374151', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-                ¿Qué tan seguro/a te sientes usando IA para tareas de tu trabajo? (1 = nada seguro, 5 = muy seguro)
+
+            {/* Herramientas — opción múltiple */}
+            <div style={{ marginBottom: 28 }}>
+              <label style={{ display: 'block', color: '#374151', fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
+                ¿Qué herramientas de IA has usado?
               </label>
+              <p style={{ color: '#9CA3AF', fontSize: 12, margin: '0 0 10px' }}>Puedes seleccionar varias</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {HERRAMIENTAS.map(h => {
+                  const sel = herramientas.includes(h)
+                  return (
+                    <button key={h} onClick={() => toggleHerramienta(h)}
+                      style={{ textAlign: 'left', padding: '12px 16px', borderRadius: 10, border: `2px solid ${sel ? P : '#E5E7EB'}`, background: sel ? PL : '#fff', color: sel ? P : '#374151', fontWeight: sel ? 700 : 400, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${sel ? P : '#D1D5DB'}`, background: sel ? P : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, color: '#fff', fontWeight: 800 }}>
+                        {sel ? '✓' : ''}
+                      </span>
+                      {h}
+                    </button>
+                  )
+                })}
+              </div>
+              {herramientas.length > 0 && (
+                <p style={{ color: P, fontSize: 12, marginTop: 8, fontWeight: 600 }}>
+                  ✓ {herramientas.length} seleccionada{herramientas.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+
+            {/* Confianza — escala */}
+            <div>
+              <label style={{ display: 'block', color: '#374151', fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
+                ¿Qué tan seguro/a te sientes usando IA en tu trabajo?
+              </label>
+              <p style={{ color: '#9CA3AF', fontSize: 12, margin: '0 0 12px' }}>1 = nada seguro · 5 = muy seguro</p>
               <div style={{ display: 'flex', gap: 10 }}>
-                {[1, 2, 3, 4, 5].map(n => (
-                  <button key={n} onClick={() => setConfianza(n)}
-                    style={{ flex: 1, aspectRatio: '1', borderRadius: 12, border: `2px solid ${confianza === n ? 'transparent' : '#E5E7EB'}`, background: confianza === n ? PG : confianza >= n ? PL : '#F9FAFB', color: confianza === n ? '#fff' : confianza >= n ? P : '#9CA3AF', fontWeight: 700, fontSize: 18, cursor: 'pointer' }}>
-                    {n}
-                  </button>
-                ))}
+                {[1, 2, 3, 4, 5].map(n => {
+                  const sel = confianza === n
+                  return (
+                    <button key={n} onClick={() => setConfianza(n)}
+                      style={{ flex: 1, padding: '16px 0', borderRadius: 12, border: `2px solid ${sel ? 'transparent' : '#E5E7EB'}`, background: sel ? PG : '#F9FAFB', color: sel ? '#fff' : '#9CA3AF', fontWeight: 700, fontSize: 20, cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {n}
+                    </button>
+                  )
+                })}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                <span style={{ color: '#9CA3AF', fontSize: 11 }}>Nada seguro</span>
-                <span style={{ color: '#9CA3AF', fontSize: 11 }}>Muy seguro</span>
-              </div>
+              {confianza > 0 && (
+                <p style={{ color: P, fontSize: 12, marginTop: 8, fontWeight: 600 }}>
+                  ✓ Nivel {confianza} seleccionado
+                </p>
+              )}
             </div>
           </div>
         )}

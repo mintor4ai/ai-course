@@ -78,8 +78,13 @@ export async function POST(req: NextRequest) {
     ${campaign.descripcion ? `<p style="color:#6B7280;font-size:14px;line-height:1.7;margin:0 0 16px">${campaign.descripcion}</p>` : ''}
     <p style="color:#6B7280;font-size:13px;margin:0 0 28px">&#8987; Tiempo estimado: 7&ndash;9 minutos. &nbsp;&#128274; Tus respuestas son confidenciales.</p>
     <div style="text-align:center;margin-bottom:28px">
-      <a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#D946EF);color:#fff;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;text-decoration:none">
+      <a href="${url}" style="display:inline-block;background-color:#7C3AED;color:#fff;font-weight:700;font-size:16px;padding:16px 44px;border-radius:12px;text-decoration:none;letter-spacing:0.3px">
         Comenzar diagn&oacute;stico &rarr;
+      </a>
+    </div>
+    <div style="text-align:center;margin-bottom:8px">
+      <a href="${url}" style="display:inline-block;background-color:#D946EF;color:#fff;font-weight:700;font-size:13px;padding:10px 28px;border-radius:8px;text-decoration:none">
+        Abrir encuesta
       </a>
     </div>
     <p style="color:#9CA3AF;font-size:11px;text-align:center;word-break:break-all;margin:0">
