@@ -390,7 +390,7 @@ export default function SurveysAdmin() {
   const exportCSV = (campaignId: string) => {
     const rs = respondents[campaignId] ?? []
     const rows = [
-      ['Email', 'Nombre', 'Puesto', 'Departamento', 'Status', 'Perfil IA', 'Score', 'Frecuencia', 'Herramientas', 'Confianza', 'Enviado', 'Completado', 'Tiempo (min)', 'URL personal'],
+      ['Email', 'Nombre', 'Puesto', 'Departamento', 'Status', 'Perfil IA', 'Score', 'Frecuencia', 'Herramientas', 'Confianza', 'Barreras', 'Enviado', 'Completado', 'Tiempo (min)', 'URL personal'],
       ...rs.map(r => {
         const resp = r.survey_responses?.[0]
         const ans = resp?.answers as Record<string, unknown> | undefined

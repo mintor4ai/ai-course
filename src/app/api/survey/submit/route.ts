@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
     const completedAt = new Date()
     const completionTimeSec = Math.round((completedAt.getTime() - startedAt.getTime()) / 1000)
 
-    await supabase.from('survey_responses').upsert({
+    const { error: upsertError } = await supabase.from('survey_responses').upsert({
       respondent_id: respondentId,
       campaign_id: respondent.campaign_id,
       answers: { ...answers, nombre, puesto, departamento, role },
@@ -187,6 +187,8 @@ export async function POST(req: NextRequest) {
       completion_time_seconds: completionTimeSec,
       updated_at: completedAt.toISOString(),
     }, { onConflict: 'respondent_id' })
+
+    if (upsertError) throw new Error(`survey_responses upsert: ${upsertError.message}`)
 
     await supabase.from('survey_respondents')
       .update({ status: 'completed', completed_at: completedAt.toISOString(), nombre })
