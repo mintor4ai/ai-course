@@ -51,7 +51,7 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
   const [role, setRole] = useState('')
   const [frecuencia, setFrecuencia] = useState('')
   const [herramientas, setHerramientas] = useState<string[]>([])
-  const [barrera, setBarrera] = useState('')
+  const [barreras, setBarreras] = useState<string[]>([])
   const [tareaFrecuente, setTareaFrecuente] = useState('')
   const [expectativa, setExpectativa] = useState('')
   const [confianza, setConfianza] = useState(0)
@@ -64,10 +64,18 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
     })
   }
 
+  const toggleBarrera = (v: string) => {
+    if (v === 'ninguna') { setBarreras(['ninguna']); return }
+    setBarreras(prev => {
+      const without = prev.filter(x => x !== 'ninguna')
+      return without.includes(v) ? without.filter(x => x !== v) : [...without, v]
+    })
+  }
+
   const canNext = [
     nombre.trim().length >= 2 && puesto.trim().length >= 2 && departamento.trim().length >= 2 && role !== '',
     frecuencia !== '' && herramientas.length > 0 && confianza > 0,
-    barrera !== '',
+    barreras.length > 0,
     tareaFrecuente.trim().length >= 30,
     expectativa.trim().length >= 20,
   ][step] ?? false
@@ -87,7 +95,7 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           respondentId, nombre, puesto, departamento, role,
-          answers: { frecuencia, herramientas, barrera, tareaFrecuente, expectativa, confianza },
+          answers: { frecuencia, herramientas, barreras, tareaFrecuente, expectativa, confianza },
           scores: { adoptionScore },
           profileName: profile,
           profileScore: adoptionScore,
@@ -244,20 +252,31 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
           </div>
         )}
 
-        {/* Step 2 — Barrera */}
+        {/* Step 2 — Barreras */}
         {step === 2 && (
           <div>
-            <p style={{ color: P, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 8px' }}>03 · Tu principal barrera</p>
+            <p style={{ color: P, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 8px' }}>03 · Tus barreras</p>
             <h2 style={{ color: '#111827', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>¿Qué te frena hoy?</h2>
-            <p style={{ color: '#9CA3AF', fontSize: 14, margin: '0 0 24px' }}>Selecciona la barrera más importante para ti en este momento.</p>
+            <p style={{ color: '#9CA3AF', fontSize: 14, margin: '0 0 20px' }}>Puedes seleccionar varias opciones.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {BARRERAS.map(b => (
-                <button key={b.v} onClick={() => setBarrera(b.v)}
-                  style={{ textAlign: 'left', padding: '14px 16px', borderRadius: 10, border: `1.5px solid ${barrera === b.v ? P : '#E5E7EB'}`, background: barrera === b.v ? PL : '#fff', color: barrera === b.v ? P : '#374151', fontWeight: barrera === b.v ? 700 : 400, fontSize: 14, cursor: 'pointer' }}>
-                  {barrera === b.v ? '✓ ' : ''}{b.l}
-                </button>
-              ))}
+              {BARRERAS.map(b => {
+                const sel = barreras.includes(b.v)
+                return (
+                  <button key={b.v} onClick={() => toggleBarrera(b.v)}
+                    style={{ textAlign: 'left', padding: '13px 16px', borderRadius: 10, border: `2px solid ${sel ? P : '#E5E7EB'}`, background: sel ? PL : '#fff', color: sel ? P : '#374151', fontWeight: sel ? 700 : 400, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${sel ? P : '#D1D5DB'}`, background: sel ? P : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, color: '#fff', fontWeight: 800 }}>
+                      {sel ? '✓' : ''}
+                    </span>
+                    {b.l}
+                  </button>
+                )
+              })}
             </div>
+            {barreras.length > 0 && (
+              <p style={{ color: P, fontSize: 12, marginTop: 8, fontWeight: 600 }}>
+                ✓ {barreras.length} seleccionada{barreras.length !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
         )}
 
