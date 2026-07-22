@@ -299,7 +299,20 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
   }
 
   // ── Print styles ─────────────────────────────────────────────────────────────
-  const printStyle = `@media print { .no-print { display: none !important; } }`
+  const printStyle = `
+    @media print {
+      @page { size: A4 portrait; margin: 16mm 14mm; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff !important; }
+      .no-print { display: none !important; }
+      .print-header { display: block !important; }
+      .print-break-before { page-break-before: always; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; }
+      thead { display: table-header-group; }
+    }
+    @media screen { .print-header { display: none; } }
+  `
 
   // ── Loading skeletons ────────────────────────────────────────────────────────
   if (loading) {
@@ -376,10 +389,22 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
           </button>
           <button
             onClick={() => window.print()}
-            style={{ background: '#F5F3FF', border: '1px solid #E9D5FF', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 13, color: '#7C3AED', fontWeight: 500 }}
+            style={{ background: 'linear-gradient(135deg,#7C3AED,#D946EF)', border: 'none', borderRadius: 8, padding: '6px 16px', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}
           >
-            🖨 Imprimir
+            🖨 Exportar PDF
           </button>
+        </div>
+      </div>
+
+      {/* Print-only cover header */}
+      <div className="print-header" style={{ padding: '0 0 24px', borderBottom: '3px solid #7C3AED', marginBottom: 24, textAlign: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#7C3AED', marginBottom: 8 }}>
+          Reporte de Adopción de Inteligencia Artificial
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 4 }}>{data.campaignName}</div>
+        <div style={{ fontSize: 14, color: '#6B7280' }}>{data.empresa}</div>
+        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+          Generado el {new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} · Human.AiX
         </div>
       </div>
 
@@ -622,6 +647,7 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
 
         {/* Respondents table */}
         <div
+          className="print-break-before"
           style={{
             background: '#fff',
             border: '1px solid #E9D5FF',
@@ -665,7 +691,6 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
                   ).map(col => (
                     <th
                       key={col.key}
-                      className="no-print"
                       onClick={() => toggleSort(col.key)}
                       style={{
                         padding: '8px 10px',
@@ -739,6 +764,12 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
               </tbody>
             </table>
           </div>
+        </div>
+        {/* Print footer */}
+        <div className="print-header" style={{ marginTop: 32, paddingTop: 16, borderTop: '1px solid #E9D5FF', display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#9CA3AF' }}>
+          <span>Human.AiX — Diagnóstico de Adopción IA</span>
+          <span>{data.campaignName} · {data.empresa}</span>
+          <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
       </div>
     </div>
