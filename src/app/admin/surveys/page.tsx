@@ -610,12 +610,10 @@ export default function SurveysAdmin() {
                         {c.config_status === 'draft' && <span style={{ fontSize: 9, background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: 6, fontWeight: 700 }}>BORRADOR</span>}
                         {c.config_status === 'published' && <span style={{ fontSize: 9, background: '#D1FAE5', color: '#065F46', padding: '1px 5px', borderRadius: 6, fontWeight: 700 }}>PUBLICADA</span>}
                       </button>
-                      {completed > 0 && (
-                        <a href={`/admin/surveys/${c.id}/reports`}
-                          style={{ padding: '8px 18px', border: `1.5px solid #E5E7EB`, borderRadius: 10, background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          📊 Reportes
-                        </a>
-                      )}
+                      <a href={`/admin/surveys/${c.id}/reports`}
+                        style={{ padding: '8px 18px', border: `1.5px solid #E5E7EB`, borderRadius: 10, background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        📊 Reportes{completed > 0 && <span style={{ fontSize: 9, background: '#D1FAE5', color: '#065F46', padding: '1px 5px', borderRadius: 6, fontWeight: 700 }}>{completed}</span>}
+                      </a>
                       <button onClick={() => setImportCampaignId(c.id)}
                         style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                         📥 Importar emails

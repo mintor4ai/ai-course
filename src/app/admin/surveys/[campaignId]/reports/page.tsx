@@ -123,7 +123,39 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
       }
       if (!res.ok) throw new Error(`Error ${res.status}`)
       const json = await res.json()
-      setData(json)
+
+      // Map API response → ReportData interface
+      const cld = json.courseLevelDistribution ?? {}
+      const mapped: ReportData = {
+        campaignName: json.campaign?.nombre ?? '',
+        empresa: json.campaign?.empresa ?? '',
+        totalEnviados: json.totalSent ?? 0,
+        totalCompletados: json.totalCompleted ?? 0,
+        tasaRespuesta: json.responseRate ?? 0,
+        scorePromedio: json.avgScore ?? 0,
+        tiempoPromedio: json.avgCompletionTimeMin ?? 0,
+        profileDistribution: json.profileDistribution ?? {},
+        dimensionScores: json.dimensionAverages ?? {},
+        aiChampionCount: json.aiChampionCount ?? 0,
+        aiChampionPct: json.aiChampionPct ?? 0,
+        nivelDistribution: {
+          fundacional: cld.foundational ?? cld.fundacional ?? 0,
+          intermedio: cld.intermediate ?? cld.intermedio ?? 0,
+          avanzado: cld.advanced ?? cld.avanzado ?? 0,
+        },
+        respondents: (json.respondents ?? []).map((r: Record<string, unknown>) => ({
+          email: String(r.email ?? ''),
+          nombre: r.nombre ? String(r.nombre) : undefined,
+          perfil: r.profile_name ? String(r.profile_name) : undefined,
+          score: r.profile_score != null ? Number(r.profile_score) : undefined,
+          nivel: r.recommended_level ? String(r.recommended_level) : undefined,
+          aiChampion: r.possible_ai_champion === true,
+          completado: r.completed_at ? String(r.completed_at) : undefined,
+          tiempoMin: r.completion_time_seconds != null ? Math.round(Number(r.completion_time_seconds) / 60) : undefined,
+          status: r.status === 'completed' ? 'completed' : 'pending',
+        })),
+      }
+      setData(mapped)
     } catch (e: unknown) {
       setFetchError(e instanceof Error ? e.message : 'Error desconocido')
     } finally {
@@ -295,6 +327,8 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
 
   if (!data) return null
 
+  const hasCompleted = data.totalCompletados > 0
+
   // ── Profile distribution ─────────────────────────────────────────────────────
   const profileEntries = Object.entries(data.profileDistribution).sort((a, b) => b[1] - a[1])
 
@@ -358,8 +392,8 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
             { label: 'Total enviados', value: data.totalEnviados },
             { label: 'Total completados', value: data.totalCompletados },
             { label: 'Tasa de respuesta', value: `${data.tasaRespuesta}%` },
-            { label: 'Score promedio', value: data.scorePromedio.toFixed(1) },
-            { label: 'Tiempo promedio (min)', value: data.tiempoPromedio.toFixed(0) },
+            { label: 'Score promedio', value: data.totalCompletados > 0 ? `${data.scorePromedio.toFixed(1)}` : '—' },
+            { label: 'Tiempo promedio (min)', value: data.tiempoPromedio > 0 ? `${data.tiempoPromedio.toFixed(0)}` : '—' },
           ].map(card => (
             <div
               key={card.label}
@@ -377,8 +411,23 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
           ))}
         </div>
 
-        {/* Two-column: Profiles + Radar */}
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 24 }}>
+        {/* Banner when no completions yet */}
+        {!hasCompleted && (
+          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 20 }}>⏳</span>
+            <div>
+              <p style={{ color: '#92400E', fontSize: 13, fontWeight: 700, margin: '0 0 2px' }}>Todavía no hay respuestas completadas</p>
+              <p style={{ color: '#B45309', fontSize: 12, margin: 0 }}>
+                {data.totalEnviados === 0
+                  ? 'Importa participantes y envía las invitaciones para comenzar a recibir respuestas.'
+                  : `${data.totalEnviados} invitación${data.totalEnviados !== 1 ? 'es' : ''} enviada${data.totalEnviados !== 1 ? 's' : ''} — en cuanto alguien complete la encuesta, los reportes aparecerán aquí.`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Two-column: Profiles + Radar — only when there are completions */}
+        {hasCompleted && <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 24 }}>
           {/* Profile distribution */}
           <div
             style={{
@@ -436,9 +485,10 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
               </tbody>
             </table>
           </div>
-        </div>
+        </div>}
 
-        {/* AI Champion highlight */}
+        {/* AI Champion highlight — only when completions exist */}
+        {hasCompleted && <>
         <div
           style={{
             background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(217,70,239,0.08))',
@@ -568,6 +618,7 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
             </div>
           )}
         </div>
+        </>}
 
         {/* Respondents table */}
         <div
