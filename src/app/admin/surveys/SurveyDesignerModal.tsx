@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { SurveyConfigJSON, SurveySectionJSON, SurveyQuestionJSON, SurveyOptionJSON } from '@/lib/survey-config-json'
+import { BUILT_IN_TEMPLATES } from '@/lib/survey-templates'
 
 const P = '#7C3AED'
 const PL = '#F5F3FF'
@@ -726,20 +727,40 @@ export default function SurveyDesignerModal({
             {/* TEMPLATES tab */}
             {step === 'templates' && (
               <div>
-                <p style={{ color: '#374151', fontSize: 13, fontWeight: 700, margin: '0 0 14px' }}>¿Desde dónde quieres empezar?</p>
+                {/* Official templates */}
+                <p style={{ color: '#9CA3AF', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 10px' }}>📌 Plantillas oficiales Human.AiX</p>
+                {BUILT_IN_TEMPLATES.map(t => {
+                  const qCount = t.config.sections.reduce((a, s) => a + s.questions.length, 0)
+                  return (
+                    <button key={t.id} onClick={() => loadTemplate(t.config, t.name)}
+                      style={{ width: '100%', padding: '14px 18px', border: `2px solid ${PB}`, borderRadius: 12, background: PL, textAlign: 'left', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                      <span style={{ padding: '4px 8px', borderRadius: 6, background: PG, color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', flexShrink: 0, marginTop: 2 }}>{t.badge}</span>
+                      <div style={{ flex: 1, textAlign: 'left' }}>
+                        <p style={{ color: P, fontSize: 13, fontWeight: 700, margin: '0 0 3px', lineHeight: 1.4 }}>{t.name}</p>
+                        <p style={{ color: '#9CA3AF', fontSize: 11, margin: 0 }}>{t.description}</p>
+                      </div>
+                      <span style={{ color: P, fontSize: 18, flexShrink: 0, paddingTop: 2 }}>→</span>
+                    </button>
+                  )
+                })}
 
-                <button onClick={() => setStep('prompt')}
-                  style={{ width: '100%', padding: '14px 18px', border: `2px solid ${P}`, borderRadius: 12, background: PL, textAlign: 'left', cursor: 'pointer', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ color: P, fontSize: 14, fontWeight: 700, margin: '0 0 3px' }}>✨ Generar nueva con IA</p>
-                    <p style={{ color: '#9CA3AF', fontSize: 12, margin: 0 }}>Claude crea preguntas personalizadas para esta campaña</p>
-                  </div>
-                  <span style={{ color: P, fontSize: 20, flexShrink: 0 }}>→</span>
-                </button>
+                {/* Generate new */}
+                <div style={{ margin: '18px 0 10px', borderTop: '1px solid #F3F4F6', paddingTop: 18 }}>
+                  <p style={{ color: '#9CA3AF', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 10px' }}>✨ Crear desde cero</p>
+                  <button onClick={() => setStep('prompt')}
+                    style={{ width: '100%', padding: '12px 18px', border: `1.5px dashed ${PB}`, borderRadius: 12, background: '#fff', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ color: P, fontSize: 13, fontWeight: 600, margin: '0 0 2px' }}>Generar encuesta personalizada con IA</p>
+                      <p style={{ color: '#9CA3AF', fontSize: 12, margin: 0 }}>Claude crea preguntas a medida según tus instrucciones</p>
+                    </div>
+                    <span style={{ color: P, fontSize: 18, flexShrink: 0 }}>→</span>
+                  </button>
+                </div>
 
+                {/* From other campaigns */}
                 {templates.length > 0 && (
                   <>
-                    <p style={{ color: '#9CA3AF', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '18px 0 10px' }}>Reusar encuesta existente</p>
+                    <p style={{ color: '#9CA3AF', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '18px 0 10px' }}>🗂 Copiar de otra campaña</p>
                     {templates.map(c => {
                       const cfg = c.survey_config as unknown as SurveyConfigJSON
                       const qCount = cfg.sections?.reduce((a: number, s: SurveySectionJSON) => a + s.questions.length, 0) ?? 0
@@ -755,10 +776,6 @@ export default function SurveyDesignerModal({
                       )
                     })}
                   </>
-                )}
-
-                {templates.length === 0 && (
-                  <p style={{ color: '#9CA3AF', fontSize: 12, margin: '8px 0 0', textAlign: 'center', fontStyle: 'italic' }}>No hay otras campañas con encuesta personalizada todavía.</p>
                 )}
               </div>
             )}
