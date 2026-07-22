@@ -262,6 +262,17 @@ export async function POST(req: NextRequest) {
       .update({ status: 'completed', completed_at: completedAt.toISOString(), nombre })
       .eq('id', respondentId)
 
+    // Insert admin notification
+    await supabase.from('survey_notifications').insert({
+      campaign_id: respondent.campaign_id,
+      respondent_id: respondentId,
+      campaign_name: campaign?.nombre ?? '',
+      respondent_email: respondent.email,
+      respondent_nombre: nombre || respondent.email,
+      profile_name: profileName,
+      profile_score: profileScore,
+    })
+
     // Send result email
     try {
       const oauth2Client = new google.auth.OAuth2(

@@ -26,6 +26,19 @@ interface SurveyResponse {
   possible_ai_champion?: boolean
   recommended_level?: string
 }
+interface Notification {
+  id: string
+  campaign_id: string
+  respondent_id: string
+  campaign_name: string
+  respondent_email: string
+  respondent_nombre: string
+  profile_name?: string
+  profile_score?: number
+  read: boolean
+  created_at: string
+}
+
 interface Respondent {
   id: string; email: string; nombre?: string; token: string
   status: string; sent_at?: string; completed_at?: string
@@ -403,8 +416,31 @@ export default function SurveysAdmin() {
   const [baseUrl, setBaseUrl] = useState('')
   const [selectedIds, setSelectedIds] = useState<Record<string, Set<string>>>({})
   const [inviteMode, setInviteMode] = useState<string | null>(null)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [showNotifs, setShowNotifs] = useState(false)
 
   useEffect(() => { setBaseUrl(window.location.origin) }, [])
+
+  const fetchNotifications = useCallback(async (a: string) => {
+    try {
+      const res = await fetch('/api/survey/notifications', { headers: { Authorization: a } })
+      if (res.ok) { const d = await res.json(); setNotifications(d.notifications ?? []) }
+    } catch { /* silent */ }
+  }, [])
+
+  const markAllRead = useCallback(async () => {
+    if (!auth) return
+    await fetch('/api/survey/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({}) })
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }, [auth])
+
+  // Poll notifications every 60s when logged in
+  useEffect(() => {
+    if (!authed || !auth) return
+    fetchNotifications(auth)
+    const interval = setInterval(() => fetchNotifications(auth), 60_000)
+    return () => clearInterval(interval)
+  }, [authed, auth, fetchNotifications])
 
   const fetchCampaigns = useCallback(async (a: string) => {
     setLoading(true)
@@ -565,7 +601,7 @@ export default function SurveysAdmin() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: '#F9FAFB', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+    <main style={{ minHeight: '100vh', background: '#F9FAFB', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }} onClick={() => setShowNotifs(false)}>
       {/* Header */}
       <div style={{ background: '#fff', borderBottom: '1px solid #F3F4F6', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -573,7 +609,7 @@ export default function SurveysAdmin() {
           <div style={{ width: 1, height: 24, background: '#E5E7EB' }} />
           <span style={{ color: P, fontSize: 13, fontWeight: 700 }}>Encuestas de Adopción IA</span>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <a href="/admin" style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #E5E7EB', background: '#fff', color: '#6B7280', fontSize: 13, textDecoration: 'none' }}>
             Diagnósticos Post-Curso
           </a>
@@ -581,6 +617,82 @@ export default function SurveysAdmin() {
             style={{ padding: '8px 18px', borderRadius: 10, border: 'none', background: PG, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             + Nueva campaña
           </button>
+
+          {/* Bell */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowNotifs(v => !v); if (!showNotifs) markAllRead() }}
+              style={{ position: 'relative', width: 38, height: 38, borderRadius: '50%', border: `1.5px solid ${notifications.some(n => !n.read) ? PB : '#E5E7EB'}`, background: notifications.some(n => !n.read) ? PL : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>
+              🔔
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 800, borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                  {notifications.filter(n => !n.read).length > 9 ? '9+' : notifications.filter(n => !n.read).length}
+                </span>
+              )}
+            </button>
+
+            {showNotifs && (
+              <div style={{ position: 'absolute', right: 0, top: 46, width: 340, background: '#fff', border: `1px solid ${PB}`, borderRadius: 16, boxShadow: '0 12px 40px rgba(124,58,237,0.15)', zIndex: 50, overflow: 'hidden' }}
+                onClick={e => e.stopPropagation()}>
+                <div style={{ padding: '14px 16px', borderBottom: `1px solid #F3F4F6`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>Notificaciones</span>
+                  {notifications.length > 0 && (
+                    <button onClick={markAllRead} style={{ fontSize: 11, color: P, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Marcar todas como leídas</button>
+                  )}
+                </div>
+                <div style={{ maxHeight: 380, overflowY: 'auto' }}>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '32px 16px', textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
+                      <div style={{ fontSize: 28, marginBottom: 8 }}>🔕</div>
+                      Sin notificaciones aún
+                    </div>
+                  ) : notifications.map(n => {
+                    const ago = (() => {
+                      const diff = Date.now() - new Date(n.created_at).getTime()
+                      const m = Math.floor(diff / 60000)
+                      if (m < 1) return 'ahora'
+                      if (m < 60) return `hace ${m} min`
+                      const h = Math.floor(m / 60)
+                      if (h < 24) return `hace ${h}h`
+                      return `hace ${Math.floor(h / 24)}d`
+                    })()
+                    const profileColor: Record<string, string> = {
+                      'AI Champion': '#D97706', 'AI Catalyst Leader': '#D97706',
+                      'AI Strategist': '#7C3AED', 'AI-Enhanced Developer': '#7C3AED',
+                      'AI Practitioner': '#3B82F6', 'AI Explorer': '#6B7280',
+                    }
+                    const col = profileColor[n.profile_name ?? ''] ?? '#6B7280'
+                    return (
+                      <div key={n.id} style={{ padding: '12px 16px', borderBottom: '1px solid #F9FAFB', background: n.read ? '#fff' : '#FAF5FF', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: PL, border: `1.5px solid ${PB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>✅</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: '#111827', fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {n.respondent_nombre || n.respondent_email}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 4 }}>
+                            completó · <span style={{ color: n.campaign_name ? P : '#9CA3AF', fontWeight: 500 }}>{n.campaign_name}</span>
+                          </div>
+                          {n.profile_name && (
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: col, background: col + '18', padding: '1px 8px', borderRadius: 20 }}>{n.profile_name}</span>
+                              {n.profile_score != null && <span style={{ fontSize: 11, color: '#9CA3AF' }}>{n.profile_score}%</span>}
+                            </div>
+                          )}
+                          <a
+                            href={`/admin/surveys/${n.campaign_id}/reports`}
+                            style={{ fontSize: 11, color: P, fontWeight: 600, textDecoration: 'none' }}
+                            onClick={() => setShowNotifs(false)}>
+                            Ver reporte →
+                          </a>
+                        </div>
+                        <div style={{ fontSize: 10, color: '#9CA3AF', whiteSpace: 'nowrap', marginTop: 2 }}>{ago}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
