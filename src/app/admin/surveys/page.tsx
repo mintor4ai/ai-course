@@ -719,6 +719,7 @@ export default function SurveysAdmin() {
           campaignId={designCampaign.id}
           campaignName={designCampaign.nombre}
           currentConfig={designCampaign.survey_config}
+          allCampaigns={campaigns}
           auth={auth}
           onClose={() => setDesignCampaign(null)}
           onSaved={() => { fetchCampaigns(auth); setDesignCampaign(null) }}
