@@ -242,8 +242,10 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
   const submit = async () => {
     setLoading(true); setError('')
     try {
-      const { calculateScores } = await import('@/lib/survey-scoring')
-      const result = calculateScores(answers)
+      const { calculateScores, calculateScoresGeneric } = await import('@/lib/survey-scoring')
+      const result = isCustom
+        ? calculateScoresGeneric(answers, sections)
+        : calculateScores(answers)
 
       const res = await fetch('/api/survey/submit', {
         method: 'POST',
