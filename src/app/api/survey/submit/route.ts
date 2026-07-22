@@ -207,7 +207,7 @@ PROXIMO_PASO:
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { respondentId, answers, scores, profileName, profileScore, courseLevel, possibleAiChampion } = body
+    const { respondentId, answers, scores, profileName, profileScore, courseLevel, possibleAiChampion, completionTimeSec: clientTimeSec } = body
     if (!respondentId) return NextResponse.json({ error: 'respondentId requerido' }, { status: 400 })
 
     const supabase = createServiceClient()
@@ -227,8 +227,6 @@ export async function POST(req: NextRequest) {
     const nombre = (answers?.participant_name as string | undefined) ?? ''
     const role = (answers?.participant_role as string | undefined) ?? ''
     const experienceRange = (answers?.technology_experience_range as string | undefined) ?? ''
-    const startedAt = new Date()
-
     const diagnosticHtml = await generateDiagnosticHtml({
       nombre, role, experienceRange, answers: answers as Answers,
       profileName, profileScore, courseLevel, possibleAiChampion,
@@ -237,7 +235,10 @@ export async function POST(req: NextRequest) {
     })
 
     const completedAt = new Date()
-    const completionTimeSec = Math.round((completedAt.getTime() - startedAt.getTime()) / 1000)
+    // Prefer client-measured time (accurate); fall back to server time only as safety net
+    const completionTimeSec = (clientTimeSec && clientTimeSec > 0)
+      ? clientTimeSec
+      : null
 
     const { error: upsertError } = await supabase.from('survey_responses').upsert({
       respondent_id: respondentId,

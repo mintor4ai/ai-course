@@ -217,6 +217,7 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const topRef = useRef<HTMLDivElement>(null)
+  const startedAtRef = useRef<number | null>(null)
 
   // Save draft to localStorage whenever answers change
   useEffect(() => {
@@ -231,6 +232,9 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
   const pct = sectionIdx < 0 ? 0 : Math.round(((sectionIdx) / TOTAL) * 100)
 
   const goNext = () => {
+    if (sectionIdx === -1 && startedAtRef.current === null) {
+      startedAtRef.current = Date.now()
+    }
     setSectionIdx(s => s + 1)
     topRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -247,6 +251,10 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
         ? calculateScoresGeneric(answers, sections)
         : calculateScores(answers)
 
+      const completionTimeSec = startedAtRef.current
+        ? Math.round((Date.now() - startedAtRef.current) / 1000)
+        : null
+
       const res = await fetch('/api/survey/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -258,6 +266,7 @@ export default function SurveyForm({ respondentId, email, nombre: initialNombre,
           profileScore: result.profileScore,
           courseLevel: result.courseLevel,
           possibleAiChampion: result.possibleAiChampion,
+          completionTimeSec,
         }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error') }
