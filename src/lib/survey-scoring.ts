@@ -202,6 +202,128 @@ interface DimScores {
   change_readiness: number
 }
 
+type GenericQuestion = {
+  column: string
+  type: string
+  scoreDimension?: string
+  min?: number
+  max?: number
+  options?: Array<{ value: string; score?: number | null }>
+  highValueOptions?: string[]
+}
+
+type GenericSection = {
+  questions: GenericQuestion[]
+}
+
+export function calculateScoresGeneric(
+  answers: Answers,
+  sections: GenericSection[]
+): ScoreResult {
+  // Collect per-dimension score arrays
+  const dimBuckets: Record<string, number[]> = {}
+
+  for (const section of sections) {
+    for (const q of section.questions) {
+      if (!q.scoreDimension) continue
+
+      const dim = q.scoreDimension
+      let score: number | null = null
+
+      if (q.type === 'single_select' && q.options && q.options.length > 0) {
+        const val = answers[q.column] as string | undefined
+        if (val) {
+          const scores = q.options
+            .map(o => o.score)
+            .filter((s): s is number => s !== null && s !== undefined)
+          const maxScore = scores.length > 0 ? Math.max(...scores) : 0
+          if (maxScore > 0) {
+            const opt = q.options.find(o => o.value === val)
+            const s = opt?.score
+            if (s !== null && s !== undefined) {
+              score = Math.round((s / maxScore) * 100)
+            }
+          }
+        }
+      } else if (q.type === 'scale') {
+        const val = answers[q.column] as number | undefined
+        if (val !== undefined && val !== null) {
+          const min = q.min ?? 1
+          const max = q.max ?? 5
+          score = max > min ? Math.round(((val - min) / (max - min)) * 100) : 0
+        }
+      } else if (q.type === 'multi_select') {
+        const val = answers[q.column] as string[] | undefined
+        if (val && Array.isArray(val)) {
+          if (q.highValueOptions && q.highValueOptions.length > 0) {
+            const hits = val.filter(v => q.highValueOptions!.includes(v)).length
+            score = Math.round((hits / q.highValueOptions.length) * 100)
+          } else if (q.options && q.options.length > 0) {
+            const nonNone = val.filter(v => v !== 'none').length
+            score = Math.round((nonNone / q.options.length) * 100)
+          }
+        }
+      }
+
+      if (score !== null) {
+        if (!dimBuckets[dim]) dimBuckets[dim] = []
+        dimBuckets[dim].push(score)
+      }
+    }
+  }
+
+  // Average within each dimension
+  const dimScores: Record<string, number> = {}
+  for (const [dim, scores] of Object.entries(dimBuckets)) {
+    if (scores.length > 0) {
+      dimScores[dim] = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    }
+  }
+
+  // Profile score: average of all dimension scores
+  const dimValues = Object.values(dimScores)
+  const profileScore = dimValues.length > 0
+    ? Math.round(dimValues.reduce((a, b) => a + b, 0) / dimValues.length)
+    : 0
+
+  // Build standard dimensions, defaulting missing ones to 0
+  const stdDims: ScoreResult['dimensions'] = {
+    ai_adoption: dimScores['ai_adoption'] ?? 0,
+    tool_exposure: dimScores['tool_exposure'] ?? 0,
+    context_engineering: dimScores['context_engineering'] ?? 0,
+    specification_maturity: dimScores['specification_maturity'] ?? 0,
+    documentation_maturity: dimScores['documentation_maturity'] ?? 0,
+    agent_readiness: dimScores['agent_readiness'] ?? 0,
+    team_adoption: dimScores['team_adoption'] ?? 0,
+    ai_leadership: dimScores['ai_leadership'] ?? 0,
+    change_readiness: dimScores['change_readiness'] ?? 0,
+  }
+
+  const role = answers['participant_role'] as string | undefined
+  const profileName = getProfileName(profileScore, role)
+
+  const courseLevel: ScoreResult['courseLevel'] =
+    profileScore < 35 ? 'foundational' : profileScore < 70 ? 'intermediate' : 'advanced'
+
+  const possibleAiChampion = detectAiChampion(answers, {
+    ai_adoption: stdDims.ai_adoption,
+    context_engineering: stdDims.context_engineering,
+    documentation_maturity: stdDims.documentation_maturity,
+    agent_readiness: stdDims.agent_readiness,
+    team_adoption: stdDims.team_adoption,
+    ai_leadership: stdDims.ai_leadership,
+    change_readiness: stdDims.change_readiness,
+  })
+
+  return {
+    profileName,
+    profileScore,
+    courseLevel,
+    possibleAiChampion,
+    dimensions: stdDims,
+  }
+}
+
 function detectAiChampion(answers: Answers, dims: DimScores): boolean {
   let flags = 0
 

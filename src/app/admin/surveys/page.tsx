@@ -13,6 +13,8 @@ interface Campaign {
   id: string; nombre: string; empresa: string; tipo: string
   descripcion?: string; status: string; created_at: string
   survey_config?: Record<string, unknown>
+  draft_config?: Record<string, unknown>
+  config_status?: string
 }
 interface SurveyResponse {
   profile_name?: string
@@ -605,7 +607,15 @@ export default function SurveysAdmin() {
                       <button onClick={() => setDesignCampaign(c)}
                         style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {c.survey_config?.version === 1 ? '✨' : '🗂️'} Encuesta
+                        {c.config_status === 'draft' && <span style={{ fontSize: 9, background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: 6, fontWeight: 700 }}>BORRADOR</span>}
+                        {c.config_status === 'published' && <span style={{ fontSize: 9, background: '#D1FAE5', color: '#065F46', padding: '1px 5px', borderRadius: 6, fontWeight: 700 }}>PUBLICADA</span>}
                       </button>
+                      {completed > 0 && (
+                        <a href={`/admin/surveys/${c.id}/reports`}
+                          style={{ padding: '8px 18px', border: `1.5px solid #E5E7EB`, borderRadius: 10, background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          📊 Reportes
+                        </a>
+                      )}
                       <button onClick={() => setImportCampaignId(c.id)}
                         style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                         📥 Importar emails
@@ -719,6 +729,8 @@ export default function SurveysAdmin() {
           campaignId={designCampaign.id}
           campaignName={designCampaign.nombre}
           currentConfig={designCampaign.survey_config}
+          currentDraft={designCampaign.draft_config}
+          configStatus={designCampaign.config_status ?? 'default'}
           allCampaigns={campaigns}
           auth={auth}
           onClose={() => setDesignCampaign(null)}
