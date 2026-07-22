@@ -401,6 +401,8 @@ export default function SurveysAdmin() {
   const [selectedRespondent, setSelectedRespondent] = useState<Respondent | null>(null)
   const [designCampaign, setDesignCampaign] = useState<Campaign | null>(null)
   const [baseUrl, setBaseUrl] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Record<string, Set<string>>>({})
+  const [inviteMode, setInviteMode] = useState<string | null>(null)
 
   useEffect(() => { setBaseUrl(window.location.origin) }, [])
 
@@ -433,17 +435,69 @@ export default function SurveysAdmin() {
     if (!respondents[id]) await fetchRespondents(id)
   }
 
-  const sendInvites = async (campaignId: string) => {
+  const sendInvites = async (campaignId: string, ids?: string[]) => {
     setInviting(campaignId)
+    const body: Record<string, unknown> = { campaign_id: campaignId }
+    if (ids?.length) body.respondent_ids = ids
     const res = await fetch('/api/survey/invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: auth },
-      body: JSON.stringify({ campaign_id: campaignId }),
+      body: JSON.stringify(body),
     })
     const data = await res.json()
     alert(`✓ ${data.sent} invitaciones enviadas`)
     setInviting(null)
+    setSelectedIds(prev => ({ ...prev, [campaignId]: new Set() }))
+    setInviteMode(null)
     fetchRespondents(campaignId)
+  }
+
+  const exportRawCSV = (campaignId: string) => {
+    const rs = respondents[campaignId] ?? []
+    const completed = rs.filter(r => r.status === 'completed')
+
+    // Collect all unique answer keys across all respondents
+    const allKeys = new Set<string>()
+    for (const r of completed) {
+      const ans = getResp(r)?.answers as Record<string, unknown> | undefined
+      if (ans) Object.keys(ans).forEach(k => allKeys.add(k))
+    }
+    const answerKeys = Array.from(allKeys).sort()
+
+    const metaCols = ['Email', 'Nombre', 'Status', 'Perfil IA', 'Score', 'Nivel recomendado', 'AI Champion', 'Completado', 'Tiempo (min)']
+    const header = [...metaCols, ...answerKeys]
+
+    const rows = [
+      header,
+      ...completed.map(r => {
+        const resp = getResp(r)
+        const ans = resp?.answers as Record<string, unknown> | undefined
+        const mins = resp?.completion_time_seconds ? Math.round(resp.completion_time_seconds / 60) : ''
+        const meta = [
+          r.email,
+          r.nombre ?? '',
+          r.status,
+          resp?.profile_name ?? '',
+          resp?.profile_score?.toString() ?? '',
+          resp?.recommended_level ?? '',
+          resp?.possible_ai_champion ? 'Sí' : '',
+          r.completed_at ? new Date(r.completed_at).toLocaleString('es-MX') : '',
+          mins.toString(),
+        ]
+        const ansValues = answerKeys.map(k => {
+          const v = ans?.[k]
+          if (v == null) return ''
+          if (Array.isArray(v)) return v.join('; ')
+          return String(v)
+        })
+        return [...meta, ...ansValues]
+      })
+    ]
+
+    const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+    a.download = `datos-completos-${campaignId}.csv`; a.click()
   }
 
   const exportCSV = (campaignId: string) => {
@@ -567,6 +621,25 @@ export default function SurveysAdmin() {
               return acc
             }, {} as Record<string, number>)
 
+            const sel = selectedIds[c.id] ?? new Set<string>()
+            const pendingOrSent = rs.filter(r => r.status === 'pending' || r.status === 'sent')
+            const selCount = sel.size
+            const toggleSel = (id: string) => {
+              setSelectedIds(prev => {
+                const next = new Set(prev[c.id] ?? [])
+                next.has(id) ? next.delete(id) : next.add(id)
+                return { ...prev, [c.id]: next }
+              })
+            }
+            const toggleAll = () => {
+              setSelectedIds(prev => {
+                const allIds = pendingOrSent.map(r => r.id)
+                const current = prev[c.id] ?? new Set()
+                const allSelected = allIds.every(id => current.has(id))
+                return { ...prev, [c.id]: allSelected ? new Set() : new Set(allIds) }
+              })
+            }
+
             return (
               <div key={c.id} style={{ background: '#fff', border: `1px solid ${expanded === c.id ? PB : '#E5E7EB'}`, borderRadius: 16, overflow: 'hidden', boxShadow: expanded === c.id ? `0 4px 20px rgba(124,58,237,0.1)` : 'none' }}>
                 {/* Campaign header */}
@@ -618,14 +691,41 @@ export default function SurveysAdmin() {
                         style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                         📥 Importar emails
                       </button>
-                      <button onClick={() => sendInvites(c.id)} disabled={inviting === c.id || pending + sent === 0}
-                        style={{ padding: '8px 18px', border: 'none', borderRadius: 10, background: inviting === c.id || pending + sent === 0 ? '#E5E7EB' : PG, color: inviting === c.id || pending + sent === 0 ? '#9CA3AF' : '#fff', fontSize: 13, fontWeight: 700, cursor: inviting === c.id || pending + sent === 0 ? 'not-allowed' : 'pointer' }}>
-                        {inviting === c.id ? 'Enviando...' : `📧 Enviar invitaciones${pending + sent > 0 ? ` (${pending + sent})` : ''}`}
-                      </button>
+                      {inviteMode === c.id ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 10, padding: '6px 14px' }}>
+                          <span style={{ fontSize: 12, color: '#92400E', fontWeight: 600 }}>
+                            {selCount > 0 ? `${selCount} seleccionado${selCount > 1 ? 's' : ''}` : 'Selecciona destinatarios en la tabla'}
+                          </span>
+                          <button
+                            onClick={() => sendInvites(c.id, selCount > 0 ? Array.from(sel) : undefined)}
+                            disabled={inviting === c.id || selCount === 0}
+                            style={{ padding: '6px 14px', border: 'none', borderRadius: 8, background: selCount > 0 && inviting !== c.id ? PG : '#E5E7EB', color: selCount > 0 && inviting !== c.id ? '#fff' : '#9CA3AF', fontSize: 12, fontWeight: 700, cursor: selCount > 0 && inviting !== c.id ? 'pointer' : 'not-allowed' }}>
+                            {inviting === c.id ? 'Enviando...' : '📧 Enviar'}
+                          </button>
+                          <button onClick={() => { setInviteMode(null); setSelectedIds(prev => ({ ...prev, [c.id]: new Set() })) }}
+                            style={{ padding: '6px 10px', border: '1px solid #FED7AA', borderRadius: 8, background: '#fff', color: '#92400E', fontSize: 12, cursor: 'pointer' }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setInviteMode(c.id); setSelectedIds(prev => ({ ...prev, [c.id]: new Set() })) }}
+                          disabled={pending + sent === 0}
+                          style={{ padding: '8px 18px', border: 'none', borderRadius: 10, background: pending + sent === 0 ? '#E5E7EB' : PG, color: pending + sent === 0 ? '#9CA3AF' : '#fff', fontSize: 13, fontWeight: 700, cursor: pending + sent === 0 ? 'not-allowed' : 'pointer' }}>
+                          📧 Enviar invitaciones{pending + sent > 0 ? ` (${pending + sent})` : ''}
+                        </button>
+                      )}
                       {total > 0 && (
                         <button onClick={() => exportCSV(c.id)}
                           style={{ padding: '8px 18px', border: `1.5px solid #E5E7EB`, borderRadius: 10, background: '#fff', color: '#374151', fontSize: 13, cursor: 'pointer' }}>
                           ⬇ CSV
+                        </button>
+                      )}
+                      {completed > 0 && (
+                        <button onClick={() => exportRawCSV(c.id)}
+                          title="Exportar todas las respuestas crudas (una columna por pregunta)"
+                          style={{ padding: '8px 18px', border: `1.5px solid #E5E7EB`, borderRadius: 10, background: '#fff', color: '#374151', fontSize: 13, cursor: 'pointer' }}>
+                          ⬇ Datos completos
                         </button>
                       )}
                       <div style={{ marginLeft: 'auto', display: 'flex', gap: 20 }}>
@@ -666,34 +766,56 @@ export default function SurveysAdmin() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                           <thead>
                             <tr style={{ background: '#FAFAFA', borderBottom: '1px solid #F3F4F6' }}>
+                              {inviteMode === c.id && (
+                                <th style={{ padding: '10px 12px', width: 36 }}>
+                                  <input type="checkbox"
+                                    checked={pendingOrSent.length > 0 && pendingOrSent.every(r => sel.has(r.id))}
+                                    onChange={toggleAll}
+                                    title="Seleccionar todos"
+                                    style={{ cursor: 'pointer', width: 15, height: 15, accentColor: P }} />
+                                </th>
+                              )}
                               {['Email', 'Nombre', 'Status', 'Perfil IA', 'Score', 'Completado', ''].map(h => (
                                 <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#9CA3AF', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>{h}</th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
-                            {rs.map(r => (
-                              <tr key={r.id} style={{ borderBottom: '1px solid #F9FAFB', cursor: 'pointer' }}
-                                onClick={() => setSelectedRespondent(r)}
-                                onMouseEnter={e => (e.currentTarget.style.background = '#FAFAFA')}
-                                onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                                <td style={{ padding: '12px 16px', color: '#374151' }}>{r.email}</td>
-                                <td style={{ padding: '12px 16px', color: '#374151' }}>{r.nombre ?? '—'}</td>
-                                <td style={{ padding: '12px 16px' }}><StatusChip status={r.status} /></td>
-                                <td style={{ padding: '12px 16px', fontWeight: 600 }}>
-                                  {getResp(r)?.profile_name
-                                    ? <span style={{ color: PROFILE_COLORS[getResp(r)!.profile_name!] ?? P }}>{getResp(r)!.profile_name}</span>
-                                    : <span style={{ color: '#9CA3AF' }}>—</span>}
-                                </td>
-                                <td style={{ padding: '12px 16px', color: '#6B7280' }}>{getResp(r)?.profile_score != null ? `${getResp(r)!.profile_score}%` : '—'}</td>
-                                <td style={{ padding: '12px 16px', color: '#9CA3AF', fontSize: 12 }}>
-                                  {r.completed_at ? new Date(r.completed_at).toLocaleDateString('es-MX') : '—'}
-                                </td>
-                                <td style={{ padding: '12px 16px' }}>
-                                  <span style={{ color: P, fontSize: 12, fontWeight: 600 }}>Ver detalle →</span>
-                                </td>
-                              </tr>
-                            ))}
+                            {rs.map(r => {
+                              const isSelectable = r.status === 'pending' || r.status === 'sent'
+                              const isChecked = sel.has(r.id)
+                              return (
+                                <tr key={r.id}
+                                  style={{ borderBottom: '1px solid #F9FAFB', cursor: 'pointer', background: isChecked ? '#FAF5FF' : '' }}
+                                  onClick={() => inviteMode === c.id && isSelectable ? toggleSel(r.id) : setSelectedRespondent(r)}
+                                  onMouseEnter={e => { if (!isChecked) e.currentTarget.style.background = '#FAFAFA' }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = isChecked ? '#FAF5FF' : '' }}>
+                                  {inviteMode === c.id && (
+                                    <td style={{ padding: '12px 12px', width: 36 }} onClick={e => e.stopPropagation()}>
+                                      {isSelectable && (
+                                        <input type="checkbox" checked={isChecked} onChange={() => toggleSel(r.id)}
+                                          style={{ cursor: 'pointer', width: 15, height: 15, accentColor: P }} />
+                                      )}
+                                    </td>
+                                  )}
+                                  <td style={{ padding: '12px 16px', color: '#374151' }}>{r.email}</td>
+                                  <td style={{ padding: '12px 16px', color: '#374151' }}>{r.nombre ?? '—'}</td>
+                                  <td style={{ padding: '12px 16px' }}><StatusChip status={r.status} /></td>
+                                  <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                                    {getResp(r)?.profile_name
+                                      ? <span style={{ color: PROFILE_COLORS[getResp(r)!.profile_name!] ?? P }}>{getResp(r)!.profile_name}</span>
+                                      : <span style={{ color: '#9CA3AF' }}>—</span>}
+                                  </td>
+                                  <td style={{ padding: '12px 16px', color: '#6B7280' }}>{getResp(r)?.profile_score != null ? `${getResp(r)!.profile_score}%` : '—'}</td>
+                                  <td style={{ padding: '12px 16px', color: '#9CA3AF', fontSize: 12 }}>
+                                    {r.completed_at ? new Date(r.completed_at).toLocaleDateString('es-MX') : '—'}
+                                  </td>
+                                  <td style={{ padding: '12px 16px' }}>
+                                    {inviteMode !== c.id && <span style={{ color: P, fontSize: 12, fontWeight: 600 }}>Ver detalle →</span>}
+                                  </td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </table>
                       </div>
