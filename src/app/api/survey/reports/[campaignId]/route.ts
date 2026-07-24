@@ -23,7 +23,7 @@ export async function GET(
   // 1. Fetch campaign
   const { data: campaign, error: campaignError } = await supabase
     .from('survey_campaigns')
-    .select('id, nombre, empresa, tipo, descripcion, status, survey_config')
+    .select('id, nombre, empresa, tipo, descripcion, status, survey_config, company_context')
     .eq('id', campaignId)
     .single()
 
@@ -128,13 +128,16 @@ export async function GET(
       email: r.email,
       nombre: r.nombre,
       status: r.status,
-      profile_name: resp?.profile_name ?? null,
-      profile_score: resp?.profile_score ?? null,
-      recommended_level: resp?.recommended_level ?? null,
-      possible_ai_champion: resp?.possible_ai_champion ?? null,
       completed_at: r.completed_at,
-      completion_time_seconds: resp?.completion_time_seconds ?? null,
-      answers: resp?.answers ?? null,
+      survey_responses: resp ? [{
+        profile_name: resp.profile_name ?? null,
+        profile_score: resp.profile_score ?? null,
+        recommended_level: resp.recommended_level ?? null,
+        possible_ai_champion: resp.possible_ai_champion ?? null,
+        completion_time_seconds: resp.completion_time_seconds ?? null,
+        scores: resp.scores ?? {},
+        answers: resp.answers ?? {},
+      }] : [],
     }
   })
 
