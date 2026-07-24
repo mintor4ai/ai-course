@@ -107,36 +107,41 @@ export async function POST(req: NextRequest) {
     const html = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${tone.headline}</title></head>
-<body style="margin:0;padding:0;background:#F9FAFB;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<body style="margin:0;padding:0;background:#F9FAFB;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;padding:24px 16px">
-  <!-- Header -->
-  <div style="background:linear-gradient(135deg,#7C3AED,#D946EF);border-radius:16px 16px 0 0;padding:36px 32px;text-align:center">
+  <!-- Header — solid color fallback for Outlook -->
+  <div style="background:#7C3AED;border-radius:16px 16px 0 0;padding:36px 32px;text-align:center">
     <img src="https://humanaix.mx/assets/logos/LogoHumanAlta.png" alt="Human.AiX" width="140" style="display:block;margin:0 auto 20px;max-width:140px">
-    <p style="color:#fff;font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;margin:0 0 8px">${campaign.empresa}</p>
-    <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0;line-height:1.3">${campaign.nombre}</h1>
+    <p style="color:#E9D5FF;font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;margin:0 0 8px">${campaign.empresa}</p>
+    <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0;line-height:1.3">${campaign.nombre}</h1>
   </div>
   <!-- Body -->
-  <div style="background:#fff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:32px">
-    ${firstName ? `<p style="color:#374151;font-size:16px;line-height:1.7;margin:0 0 16px">Hola, ${firstName}</p>` : ''}
+  <div style="background:#ffffff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:32px">
+    ${firstName ? `<p style="color:#111827;font-size:16px;font-weight:600;line-height:1.7;margin:0 0 12px">Hola, ${firstName}</p>` : ''}
     <p style="color:#374151;font-size:15px;line-height:1.8;margin:0 0 16px">${tone.body}</p>
-    ${campaign.descripcion && inviteCount === 0 ? `<p style="color:#6B7280;font-size:14px;line-height:1.7;margin:0 0 16px">${campaign.descripcion}</p>` : ''}
-    <p style="color:#9CA3AF;font-size:13px;margin:0 0 28px">&#8987; Tiempo estimado: 7&ndash;9 minutos. &nbsp;&#128274; Tus respuestas son confidenciales.</p>
-    <div style="text-align:center;margin-bottom:24px">
-      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${url}" style="height:52px;v-text-anchor:middle;width:260px;" arcsize="23%" fillcolor="#7C3AED"><center><![endif]-->
-      <a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#D946EF);color:#fff;font-weight:700;font-size:16px;padding:16px 44px;border-radius:12px;text-decoration:none;letter-spacing:0.3px;mso-hide:all">
-        ${tone.cta}
-      </a>
-      <!--[if mso]></center></v:roundrect><![endif]-->
-    </div>
-    <p style="color:#C4B5FD;font-size:11px;text-align:center;word-break:break-all;margin:0">
-      O copia este enlace: <span style="color:#7C3AED">${url}</span>
+    ${campaign.descripcion && inviteCount === 0 ? `<p style="color:#4B5563;font-size:14px;line-height:1.7;margin:0 0 16px">${campaign.descripcion}</p>` : ''}
+    <p style="color:#6B7280;font-size:13px;margin:0 0 28px">&#8987; Tiempo estimado: 7&ndash;9 minutos. &nbsp; &#128274; Tus respuestas son confidenciales.</p>
+    <!-- Button — table-based for maximum compatibility -->
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px">
+      <tr>
+        <td style="border-radius:12px;background:#7C3AED">
+          <a href="${url}" target="_blank"
+            style="display:inline-block;padding:16px 48px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;border-radius:12px;font-family:Arial,sans-serif;letter-spacing:0.3px">
+            ${tone.cta}
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="color:#6B7280;font-size:12px;text-align:center;word-break:break-all;margin:0">
+      O copia este enlace en tu navegador:<br>
+      <a href="${url}" style="color:#7C3AED;text-decoration:none">${url}</a>
     </p>
   </div>
   <!-- Footer -->
-  <div style="background:linear-gradient(135deg,#7C3AED,#D946EF);border-radius:0 0 16px 16px;padding:28px 32px;text-align:center">
-    <p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:6px;text-transform:uppercase;margin:0 0 10px">✦ &nbsp; ✦ &nbsp; ✦</p>
-    <p style="color:#fff;font-size:15px;font-style:italic;font-weight:600;margin:0;line-height:1.6">&ldquo;T&uacute; eres el piloto.<br>La IA es tu copiloto.&rdquo;</p>
-    <p style="color:rgba(255,255,255,0.4);font-size:10px;letter-spacing:3px;text-transform:uppercase;margin:14px 0 0">Human.AiX</p>
+  <div style="background:#6D28D9;border-radius:0 0 16px 16px;padding:28px 32px;text-align:center">
+    <p style="color:#C4B5FD;font-size:13px;letter-spacing:4px;text-transform:uppercase;margin:0 0 12px">✦ &nbsp; ✦ &nbsp; ✦</p>
+    <p style="color:#ffffff;font-size:15px;font-style:italic;font-weight:600;margin:0;line-height:1.6">&ldquo;T&uacute; eres el piloto.<br>La IA es tu copiloto.&rdquo;</p>
+    <p style="color:#C4B5FD;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:14px 0 0">Human.AiX</p>
   </div>
 </div>
 </body></html>`
