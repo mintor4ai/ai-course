@@ -420,6 +420,65 @@ function CreateModal({ auth, onClose, onCreated }: { auth: string; onClose: () =
   )
 }
 
+function QRModal({ campaign, baseUrl, onClose }: { campaign: Campaign; baseUrl: string; onClose: () => void }) {
+  const [qrSrc, setQrSrc] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const url = `${baseUrl}/c/${campaign.public_token}`
+
+  useEffect(() => {
+    if (!campaign.public_token) return
+    import('qrcode').then(QRCode => {
+      QRCode.toDataURL(url, { width: 240, margin: 2 }).then(setQrSrc)
+    })
+  }, [url, campaign.public_token])
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const downloadQR = () => {
+    if (!qrSrc) return
+    const a = document.createElement('a')
+    a.href = qrSrc
+    a.download = `qr-${campaign.id}.png`
+    a.click()
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 20, maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(124,58,237,0.25)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: PG, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, margin: '0 0 4px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{campaign.empresa.toUpperCase()}</p>
+            <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0 }}>{campaign.nombre}</h2>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+        </div>
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>Link público de registro</p>
+          {qrSrc
+            ? <img src={qrSrc} alt="QR Code" style={{ width: 240, height: 240, borderRadius: 12, border: `2px solid ${PB}`, display: 'block', margin: '0 auto 20px' }} />
+            : <div style={{ width: 240, height: 240, background: PL, borderRadius: 12, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: 13 }}>Generando QR...</div>
+          }
+          <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: '10px 14px', marginBottom: 16, wordBreak: 'break-all', fontSize: 12, color: '#374151', userSelect: 'text', textAlign: 'left' }}>
+            {url}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={copyUrl} style={{ flex: 1, padding: '11px', border: `1.5px solid ${PB}`, borderRadius: 10, background: copied ? '#D1FAE5' : PL, color: copied ? '#065F46' : P, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              {copied ? '✓ Copiado' : '📋 Copiar URL'}
+            </button>
+            <button onClick={downloadQR} disabled={!qrSrc} style={{ flex: 1, padding: '11px', border: 'none', borderRadius: 10, background: qrSrc ? PG : '#E5E7EB', color: qrSrc ? '#fff' : '#9CA3AF', fontSize: 13, fontWeight: 700, cursor: qrSrc ? 'pointer' : 'not-allowed' }}>
+              ⬇ Descargar QR
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const PROFILES = ['AI Explorer', 'AI Practitioner', 'AI Strategist', 'AI Catalyst Leader']
 const PROFILE_COLORS: Record<string, string> = {
   'AI Explorer': '#9CA3AF',
@@ -443,6 +502,8 @@ export default function SurveysAdmin() {
   const [inviting, setInviting] = useState<string | null>(null)
   const [selectedRespondent, setSelectedRespondent] = useState<Respondent | null>(null)
   const [designCampaign, setDesignCampaign] = useState<Campaign | null>(null)
+  const [qrCampaign, setQrCampaign] = useState<Campaign | null>(null)
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null)
   const [baseUrl, setBaseUrl] = useState('')
   const [selectedIds, setSelectedIds] = useState<Record<string, Set<string>>>({})
   const [inviteMode, setInviteMode] = useState<string | null>(null)
@@ -836,6 +897,19 @@ export default function SurveysAdmin() {
                         style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                         📥 Importar emails
                       </button>
+                      {c.public_token && (
+                        <button onClick={(e) => {
+                          e.stopPropagation()
+                          const url = `${baseUrl}/c/${c.public_token}`
+                          navigator.clipboard.writeText(url)
+                          setCopiedLinkId(c.id)
+                          setTimeout(() => setCopiedLinkId(null), 2000)
+                          setQrCampaign(c)
+                        }}
+                          style={{ padding: '8px 18px', border: `1.5px solid #BFDBFE`, borderRadius: 10, background: copiedLinkId === c.id ? '#D1FAE5' : '#EFF6FF', color: copiedLinkId === c.id ? '#065F46' : '#3B82F6', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                          {copiedLinkId === c.id ? '✓ Copiado' : '🔗 Link público'}
+                        </button>
+                      )}
                       {inviteMode === c.id ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 10, padding: '6px 14px' }}>
                           <span style={{ fontSize: 12, color: '#92400E', fontWeight: 600 }}>
@@ -944,7 +1018,12 @@ export default function SurveysAdmin() {
                                     </td>
                                   )}
                                   <td style={{ padding: '12px 16px', color: '#374151' }}>{r.email}</td>
-                                  <td style={{ padding: '12px 16px', color: '#374151' }}>{r.nombre ?? '—'}</td>
+                                  <td style={{ padding: '12px 16px', color: '#374151' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      {r.nombre ?? '—'}
+                                      {r.source === 'public_link' && <span style={{ background: '#EFF6FF', color: '#3B82F6', border: '1px solid #BFDBFE', fontSize: 10, padding: '1px 7px', borderRadius: 20, fontWeight: 700, whiteSpace: 'nowrap' }}>Entrada directa</span>}
+                                    </div>
+                                  </td>
                                   <td style={{ padding: '12px 16px' }}><StatusChip status={r.status} /></td>
                                   <td style={{ padding: '12px 16px', fontWeight: 600 }}>
                                     {getResp(r)?.profile_name
@@ -992,6 +1071,9 @@ export default function SurveysAdmin() {
             if (expanded) fetchRespondents(expanded)
           }}
         />
+      )}
+      {qrCampaign && (
+        <QRModal campaign={qrCampaign} baseUrl={baseUrl} onClose={() => setQrCampaign(null)} />
       )}
       {designCampaign && (
         <SurveyDesignerModal
