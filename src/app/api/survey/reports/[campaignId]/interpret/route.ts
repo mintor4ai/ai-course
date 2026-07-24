@@ -27,82 +27,84 @@ const DIAGNOSTIC_EXECUTIVE_DEFAULT = `Eres consultor senior de transformación d
 
 function buildPrompt(staticInstructions: string, stats: any): string {
   const {
-    campaign,
-    totalSent,
-    responseRate,
-    profileDistribution,
-    dimensionAverages,
-    aiChampionPct,
-    courseLevelDistribution,
-    respondents,
+    campaignName, empresa,
+    totalEnviados, totalCompletados, tasaRespuesta, scorePromedio,
+    profileDistribution, dimensionScores, aiChampionCount, aiChampionPct,
+    nivelDistribution, respondents,
   } = stats
 
-  // Profile distribution as bullet list
+  // Aggregate stats
   const profileLines = Object.entries(profileDistribution ?? {})
-    .map(([name, count]) => `  - ${name}: ${count}`)
+    .map(([name, count]) => `  - ${name}: ${count} persona(s)`)
     .join('\n')
 
-  // Dimension averages sorted highest to lowest
-  const sortedDimensions = Object.entries(dimensionAverages ?? {})
+  const sortedDimensions = Object.entries(dimensionScores ?? {})
     .sort(([, a], [, b]) => (b as number) - (a as number))
-    .map(([key, val]) => `  - ${key}: ${val}`)
+    .map(([key, val]) => `  - ${key}: ${Math.round(val as number)}%`)
     .join('\n')
 
-  // Course level distribution
-  const courseLevelLines = Object.entries(courseLevelDistribution ?? {})
+  const nivelLines = Object.entries(nivelDistribution ?? {})
     .map(([level, count]) => `  - ${level}: ${count}`)
     .join('\n')
 
-  // Collect open text answers (first 3 non-empty)
-  const freqTasks: string[] = []
-  const courseExpectations: string[] = []
-  for (const r of respondents ?? []) {
-    if (freqTasks.length < 3 && r.answers?.frequent_time_consuming_task) {
-      freqTasks.push(r.answers.frequent_time_consuming_task)
-    }
-    if (courseExpectations.length < 3 && r.answers?.course_value_expectation) {
-      courseExpectations.push(r.answers.course_value_expectation)
-    }
-    if (freqTasks.length >= 3 && courseExpectations.length >= 3) break
-  }
+  // Per-respondent full detail
+  const completados = (respondents ?? []).filter((r: any) => r.status === 'completed')
 
-  const freqTaskLines = freqTasks.length > 0
-    ? freqTasks.map((t, i) => `  ${i + 1}. "${t}"`).join('\n')
-    : '  (sin respuestas)'
+  const respondentDetails = completados.map((r: any, i: number) => {
+    const answers = r.answers ?? {}
+    const scores = r.scores ?? {}
 
-  const expectationLines = courseExpectations.length > 0
-    ? courseExpectations.map((t, i) => `  ${i + 1}. "${t}"`).join('\n')
-    : '  (sin respuestas)'
+    // Extract all text answers
+    const textAnswers = Object.entries(answers)
+      .filter(([, v]) => typeof v === 'string' && (v as string).length > 2)
+      .map(([k, v]) => `    ${k}: "${v}"`)
+      .join('\n')
+
+    const arrayAnswers = Object.entries(answers)
+      .filter(([, v]) => Array.isArray(v) && (v as unknown[]).length > 0)
+      .map(([k, v]) => `    ${k}: ${(v as unknown[]).join(', ')}`)
+      .join('\n')
+
+    const scoreLines = Object.entries(scores)
+      .map(([k, v]) => `    ${k}: ${Math.round(v as number)}%`)
+      .join('\n')
+
+    return `  Participante ${i + 1}: ${r.nombre ?? r.email}
+  Perfil: ${r.perfil ?? '—'} | Score: ${r.score ?? '—'}% | Nivel recomendado: ${r.nivel ?? '—'} | AI Champion: ${r.aiChampion ? 'Sí' : 'No'} | Tiempo: ${r.tiempoMin ?? '—'} min
+  Dimensiones individuales:
+${scoreLines || '    (sin datos)'}
+  Respuestas seleccionadas:
+${arrayAnswers || '    (ninguna)'}
+  Respuestas abiertas:
+${textAnswers || '    (ninguna)'}`
+  }).join('\n\n')
 
   return `${staticInstructions}
 
 ---
 
-DATOS DEL COHORTE:
+DATOS COMPLETOS DEL COHORTE:
 
-Campaña: ${campaign?.nombre ?? 'N/A'}
-Empresa: ${campaign?.empresa ?? 'N/A'}
-Tipo: ${campaign?.tipo ?? 'N/A'}
-
-Participantes enviados: ${totalSent}
-Tasa de respuesta: ${responseRate}%
+Campaña: ${campaignName ?? 'N/A'}
+Empresa: ${empresa ?? 'N/A'}
+Participantes invitados: ${totalEnviados} | Completados: ${totalCompletados} | Tasa de respuesta: ${tasaRespuesta}%
+Score promedio del grupo: ${scorePromedio}%
+Posibles AI Champions: ${aiChampionCount} (${aiChampionPct}%)
 
 Distribución de perfiles:
 ${profileLines || '  (sin datos)'}
 
-Promedios por dimensión (de mayor a menor):
+Promedios por dimensión (mayor a menor):
 ${sortedDimensions || '  (sin datos)'}
 
-Porcentaje AI Champions: ${aiChampionPct}%
-
 Distribución por nivel de curso recomendado:
-${courseLevelLines || '  (sin datos)'}
+${nivelLines || '  (sin datos)'}
 
-Tareas frecuentes que consumen más tiempo (respuestas abiertas):
-${freqTaskLines}
+---
 
-Expectativas del programa (respuestas abiertas):
-${expectationLines}
+DETALLE COMPLETO POR PARTICIPANTE (${completados.length} completados):
+
+${respondentDetails || '  (sin participantes completados)'}
 `
 }
 
@@ -139,7 +141,7 @@ export async function POST(
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1800,
+        max_tokens: 2500,
         messages: [{ role: 'user', content: prompt }],
       }),
     })

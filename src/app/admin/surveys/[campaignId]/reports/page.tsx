@@ -143,17 +143,22 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
           intermedio: cld.intermediate ?? cld.intermedio ?? 0,
           avanzado: cld.advanced ?? cld.avanzado ?? 0,
         },
-        respondents: (json.respondents ?? []).map((r: Record<string, unknown>) => ({
-          email: String(r.email ?? ''),
-          nombre: r.nombre ? String(r.nombre) : undefined,
-          perfil: r.profile_name ? String(r.profile_name) : undefined,
-          score: r.profile_score != null ? Number(r.profile_score) : undefined,
-          nivel: r.recommended_level ? String(r.recommended_level) : undefined,
-          aiChampion: r.possible_ai_champion === true,
-          completado: r.completed_at ? String(r.completed_at) : undefined,
-          tiempoMin: r.completion_time_seconds != null ? Math.round(Number(r.completion_time_seconds) / 60) : undefined,
-          status: r.status === 'completed' ? 'completed' : 'pending',
-        })),
+        respondents: (json.respondents ?? []).map((r: Record<string, unknown>) => {
+          const resp = Array.isArray(r.survey_responses) ? r.survey_responses[0] : r.survey_responses
+          return {
+            email: String(r.email ?? ''),
+            nombre: r.nombre ? String(r.nombre) : undefined,
+            perfil: resp?.profile_name ? String(resp.profile_name) : undefined,
+            score: resp?.profile_score != null ? Number(resp.profile_score) : undefined,
+            nivel: resp?.recommended_level ? String(resp.recommended_level) : undefined,
+            aiChampion: resp?.possible_ai_champion === true,
+            completado: r.completed_at ? String(r.completed_at) : undefined,
+            tiempoMin: resp?.completion_time_seconds != null ? Math.round(Number(resp.completion_time_seconds) / 60) : undefined,
+            status: r.status === 'completed' ? 'completed' : 'pending',
+            scores: resp?.scores ?? {},
+            answers: resp?.answers ?? {},
+          }
+        }),
       }
       setData(mapped)
     } catch (e: unknown) {
