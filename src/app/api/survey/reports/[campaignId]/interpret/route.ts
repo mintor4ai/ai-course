@@ -27,7 +27,7 @@ const DIAGNOSTIC_EXECUTIVE_DEFAULT = `Eres consultor senior de transformación d
 
 function buildPrompt(staticInstructions: string, stats: any): string {
   const {
-    campaignName, empresa,
+    campaignName, empresa, companyContext,
     totalEnviados, totalCompletados, tasaRespuesta, scorePromedio,
     profileDistribution, dimensionScores, aiChampionCount, aiChampionPct,
     nivelDistribution, respondents,
@@ -80,6 +80,11 @@ ${textAnswers || '    (ninguna)'}`
   }).join('\n\n')
 
   return `${staticInstructions}
+
+---
+
+CONTEXTO DE LA EMPRESA:
+${companyContext || '(No proporcionado)'}
 
 ---
 

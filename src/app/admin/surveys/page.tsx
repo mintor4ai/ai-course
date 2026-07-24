@@ -16,6 +16,9 @@ interface Campaign {
   draft_config?: Record<string, unknown>
   config_status?: string
   public_token?: string
+  company_context?: string
+  company_url?: string
+  company_linkedin?: string
 }
 interface SurveyResponse {
   profile_name?: string
@@ -475,6 +478,143 @@ function QRModal({ campaign, baseUrl, onClose }: { campaign: Campaign; baseUrl: 
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function CompanyContextPanel({ campaign, auth, onUpdate }: { campaign: Campaign; auth: string; onUpdate: (ctx: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [context, setContext] = useState(campaign.company_context ?? '')
+  const [url, setUrl] = useState(campaign.company_url ?? '')
+  const [linkedin, setLinkedin] = useState(campaign.company_linkedin ?? '')
+  const [researching, setResearching] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [aiNote, setAiNote] = useState(false)
+
+  const toggle = async () => {
+    if (!open && !loaded) {
+      const res = await fetch(`/api/survey/campaigns/context?campaign_id=${campaign.id}`, { headers: { Authorization: auth } })
+      if (res.ok) {
+        const d = await res.json()
+        setContext(d.company_context ?? '')
+        setUrl(d.company_url ?? '')
+        setLinkedin(d.company_linkedin ?? '')
+      }
+      setLoaded(true)
+    }
+    setOpen(v => !v)
+  }
+
+  const research = async () => {
+    setResearching(true)
+    setAiNote(false)
+    try {
+      const res = await fetch('/api/survey/campaigns/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ campaign_id: campaign.id, empresa: campaign.empresa, descripcion: campaign.descripcion, company_url: url, company_linkedin: linkedin }),
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setContext(d.company_context ?? '')
+        onUpdate(d.company_context ?? '')
+        setAiNote(true)
+      }
+    } finally {
+      setResearching(false)
+    }
+  }
+
+  const save = async () => {
+    setSaving(true)
+    const res = await fetch('/api/survey/campaigns/context', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ campaign_id: campaign.id, company_context: context, company_url: url, company_linkedin: linkedin }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      setSaved(true)
+      onUpdate(context)
+      setTimeout(() => setSaved(false), 2500)
+    }
+  }
+
+  return (
+    <div style={{ margin: '0 24px 0', borderTop: `1px solid ${PB}` }}>
+      <button
+        onClick={toggle}
+        style={{ width: '100%', padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: P, fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>🏢 Contexto de Empresa</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9CA3AF' }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{ background: '#fff', border: `1px solid ${PB}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ display: 'block', fontSize: 12, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>URL de la empresa</label>
+              <input
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                placeholder="https://empresa.com"
+                style={{ width: '100%', padding: '8px 12px', border: `1.5px solid ${PB}`, borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#374151' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ display: 'block', fontSize: 12, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>LinkedIn</label>
+              <input
+                value={linkedin}
+                onChange={e => setLinkedin(e.target.value)}
+                placeholder="https://linkedin.com/company/..."
+                style={{ width: '100%', padding: '8px 12px', border: `1.5px solid ${PB}`, borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#374151' }}
+              />
+            </div>
+          </div>
+
+          <textarea
+            value={context}
+            onChange={e => setContext(e.target.value)}
+            rows={10}
+            placeholder="Contexto de la empresa — describe industria, cultura, madurez tecnológica, etc."
+            style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${PB}`, borderRadius: 8, fontSize: 13, resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#374151', fontFamily: 'inherit', marginBottom: 8 }}
+          />
+
+          {aiNote && (
+            <p style={{ fontSize: 12, color: '#9CA3AF', margin: '0 0 10px', fontStyle: 'italic' }}>
+              El perfil fue generado con IA — puedes editarlo antes de guardar.
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={research}
+              disabled={researching}
+              style={{ padding: '9px 18px', border: 'none', borderRadius: 10, background: researching ? '#E5E7EB' : PG, color: researching ? '#9CA3AF' : '#fff', fontSize: 13, fontWeight: 700, cursor: researching ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {researching ? (
+                <>
+                  <svg width={14} height={14} viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite' }}>
+                    <circle cx={12} cy={12} r={10} fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth={3} />
+                    <path d="M12 2 a10 10 0 0 1 10 10" fill="none" stroke="#9CA3AF" strokeWidth={3} strokeLinecap="round" />
+                  </svg>
+                  Investigando...
+                </>
+              ) : '🔍 Investigar con IA'}
+            </button>
+            <button
+              onClick={save}
+              disabled={saving}
+              style={{ padding: '9px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+              {saving ? 'Guardando...' : '💾 Guardar contexto'}
+            </button>
+            {saved && (
+              <span style={{ color: '#22C55E', fontSize: 13, fontWeight: 700 }}>✓ Guardado</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -972,6 +1112,15 @@ export default function SurveysAdmin() {
                         })}
                       </div>
                     )}
+
+                    {/* Company context panel */}
+                    <CompanyContextPanel
+                      campaign={c}
+                      auth={auth}
+                      onUpdate={(ctx) => {
+                        setCampaigns(prev => prev.map(camp => camp.id === c.id ? { ...camp, company_context: ctx } : camp))
+                      }}
+                    />
 
                     {/* Respondents table */}
                     {rs.length === 0 ? (

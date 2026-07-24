@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('survey_campaigns')
-    .select('id, nombre, empresa, tipo, descripcion, survey_version, status, created_at, survey_config, draft_config, config_status, public_token')
+    .select('id, nombre, empresa, tipo, descripcion, survey_version, status, created_at, survey_config, draft_config, config_status, public_token, company_context, company_url, company_linkedin')
     .order('created_at', { ascending: false })
 
   if (tipo) query = query.eq('tipo', tipo)

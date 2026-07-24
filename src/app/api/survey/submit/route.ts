@@ -103,6 +103,7 @@ async function generateDiagnosticHtml(data: {
   possibleAiChampion: boolean
   dimensions: Record<string, number>
   campaign: { nombre: string; empresa: string }
+  companyContext?: string
 }): Promise<string> {
   const pDesc = PROFILE_DESCRIPTIONS[data.profileName] ?? PROFILE_DESCRIPTIONS['AI Explorer']
   const rolLabel = ROLE_LABELS[data.role] ?? data.role
@@ -116,6 +117,9 @@ async function generateDiagnosticHtml(data: {
   const staticInstructions = await getPrompt('diagnostic_individual', DIAGNOSTIC_INDIVIDUAL_DEFAULT)
 
   const dataBlock = `
+CONTEXTO DE LA EMPRESA:
+${data.companyContext || '(No disponible)'}
+
 PERFIL DEL PARTICIPANTE:
 - Nombre: ${data.nombre}
 - Función: ${rolLabel}
@@ -267,14 +271,14 @@ export async function POST(req: NextRequest) {
 
     const { data: respondent } = await supabase
       .from('survey_respondents')
-      .select('id, email, campaign_id, survey_campaigns(nombre, empresa)')
+      .select('id, email, campaign_id, survey_campaigns(nombre, empresa, company_context)')
       .eq('id', respondentId).single()
 
     if (!respondent) return NextResponse.json({ error: 'Respondente no encontrado' }, { status: 404 })
 
     const rawCampaign = respondent.survey_campaigns
-    const campaign: { nombre: string; empresa: string } = (rawCampaign && !Array.isArray(rawCampaign))
-      ? (rawCampaign as { nombre: string; empresa: string })
+    const campaign: { nombre: string; empresa: string; company_context?: string } = (rawCampaign && !Array.isArray(rawCampaign))
+      ? (rawCampaign as { nombre: string; empresa: string; company_context?: string })
       : { nombre: 'Diagnóstico IA', empresa: 'Human.AiX' }
 
     const nombre = (answers?.participant_name as string | undefined) ?? ''
@@ -285,6 +289,7 @@ export async function POST(req: NextRequest) {
       profileName, profileScore, courseLevel, possibleAiChampion,
       dimensions: scores ?? {},
       campaign,
+      companyContext: campaign.company_context,
     })
 
     const completedAt = new Date()

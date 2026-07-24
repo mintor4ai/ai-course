@@ -37,6 +37,7 @@ interface Respondent {
 interface ReportData {
   campaignName: string
   empresa: string
+  companyContext?: string
   totalEnviados: number
   totalCompletados: number
   tasaRespuesta: number
@@ -129,6 +130,7 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
       const mapped: ReportData = {
         campaignName: json.campaign?.nombre ?? '',
         empresa: json.campaign?.empresa ?? '',
+        companyContext: json.campaign?.company_context ?? '',
         totalEnviados: json.totalSent ?? 0,
         totalCompletados: json.totalCompleted ?? 0,
         tasaRespuesta: json.responseRate ?? 0,
