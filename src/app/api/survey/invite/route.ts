@@ -107,43 +107,52 @@ export async function POST(req: NextRequest) {
     const html = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${tone.headline}</title></head>
-<body style="margin:0;padding:0;background:#F9FAFB;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
-<div style="max-width:560px;margin:0 auto;padding:24px 16px">
-  <!-- Header — solid color fallback for Outlook -->
-  <div style="background:#7C3AED;border-radius:16px 16px 0 0;padding:36px 32px;text-align:center">
-    <img src="https://humanaix.mx/assets/logos/LogoHumanAlta.png" alt="Human.AiX" width="140" style="display:block;margin:0 auto 20px;max-width:140px">
-    <p style="color:#E9D5FF;font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;margin:0 0 8px">${campaign.empresa}</p>
-    <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0;line-height:1.3">${campaign.nombre}</h1>
-  </div>
+<body style="margin:0;padding:0;background-color:#F9FAFB;font-family:Arial,Helvetica,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F9FAFB">
+<tr><td align="center" style="padding:24px 16px">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+  <!-- Header -->
+  <tr><td bgcolor="#7C3AED" style="background-color:#7C3AED;border-radius:16px 16px 0 0;padding:36px 32px;text-align:center">
+    <img src="https://humanaix.mx/assets/logos/LogoHumanAlta.png" alt="Human.AiX" width="140" style="display:block;margin:0 auto 20px">
+    <p style="color:#E9D5FF;font-size:11px;font-weight:bold;letter-spacing:4px;text-transform:uppercase;margin:0 0 8px;font-family:Arial,sans-serif">${campaign.empresa}</p>
+    <p style="color:#ffffff;font-size:22px;font-weight:bold;margin:0;line-height:1.3;font-family:Arial,sans-serif">${campaign.nombre}</p>
+  </td></tr>
   <!-- Body -->
-  <div style="background:#ffffff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:32px">
-    ${firstName ? `<p style="color:#111827;font-size:16px;font-weight:600;line-height:1.7;margin:0 0 12px">Hola, ${firstName}</p>` : ''}
-    <p style="color:#374151;font-size:15px;line-height:1.8;margin:0 0 16px">${tone.body}</p>
-    ${campaign.descripcion && inviteCount === 0 ? `<p style="color:#4B5563;font-size:14px;line-height:1.7;margin:0 0 16px">${campaign.descripcion}</p>` : ''}
-    <p style="color:#6B7280;font-size:13px;margin:0 0 28px">&#8987; Tiempo estimado: 7&ndash;9 minutos. &nbsp; &#128274; Tus respuestas son confidenciales.</p>
-    <!-- Button — table-based for maximum compatibility -->
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px">
-      <tr>
-        <td style="border-radius:12px;background:#7C3AED">
-          <a href="${url}" target="_blank"
-            style="display:inline-block;padding:16px 48px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;border-radius:12px;font-family:Arial,sans-serif;letter-spacing:0.3px">
-            ${tone.cta}
-          </a>
-        </td>
-      </tr>
-    </table>
-    <p style="color:#6B7280;font-size:12px;text-align:center;word-break:break-all;margin:0">
+  <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:32px">
+    ${firstName ? `<p style="color:#111827;font-size:16px;font-weight:bold;line-height:1.7;margin:0 0 12px;font-family:Arial,sans-serif">Hola, ${firstName}</p>` : ''}
+    <p style="color:#374151;font-size:15px;line-height:1.8;margin:0 0 16px;font-family:Arial,sans-serif">${tone.body}</p>
+    ${campaign.descripcion && inviteCount === 0 ? `<p style="color:#4B5563;font-size:14px;line-height:1.7;margin:0 0 16px;font-family:Arial,sans-serif">${campaign.descripcion}</p>` : ''}
+    <p style="color:#6B7280;font-size:13px;margin:0 0 28px;font-family:Arial,sans-serif">&#8987; Tiempo estimado: 7&ndash;9 minutos. &nbsp; &#128274; Tus respuestas son confidenciales.</p>
+    <!-- Button -->
+    <div style="text-align:center;margin:0 0 28px">
+      <!--[if mso]>
+      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+        href="${url}" style="height:52px;v-text-anchor:middle;width:260px;" arcsize="20%" stroke="f" fillcolor="#7C3AED">
+        <w:anchorlock/>
+        <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold">${tone.cta}</center>
+      </v:roundrect>
+      <![endif]-->
+      <!--[if !mso]><!-->
+      <a href="${url}" target="_blank"
+        style="background-color:#7C3AED;border-radius:10px;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;line-height:52px;text-align:center;text-decoration:none;width:260px;-webkit-text-size-adjust:none">
+        ${tone.cta}
+      </a>
+      <!--<![endif]-->
+    </div>
+    <p style="color:#6B7280;font-size:12px;text-align:center;word-break:break-all;margin:0;font-family:Arial,sans-serif">
       O copia este enlace en tu navegador:<br>
-      <a href="${url}" style="color:#7C3AED;text-decoration:none">${url}</a>
+      <a href="${url}" style="color:#7C3AED">${url}</a>
     </p>
-  </div>
+  </td></tr>
   <!-- Footer -->
-  <div style="background:#6D28D9;border-radius:0 0 16px 16px;padding:28px 32px;text-align:center">
-    <p style="color:#C4B5FD;font-size:13px;letter-spacing:4px;text-transform:uppercase;margin:0 0 12px">✦ &nbsp; ✦ &nbsp; ✦</p>
-    <p style="color:#ffffff;font-size:15px;font-style:italic;font-weight:600;margin:0;line-height:1.6">&ldquo;T&uacute; eres el piloto.<br>La IA es tu copiloto.&rdquo;</p>
-    <p style="color:#C4B5FD;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:14px 0 0">Human.AiX</p>
-  </div>
-</div>
+  <tr><td bgcolor="#6D28D9" style="background-color:#6D28D9;border-radius:0 0 16px 16px;padding:28px 32px;text-align:center">
+    <p style="color:#C4B5FD;font-size:13px;letter-spacing:4px;text-transform:uppercase;margin:0 0 12px;font-family:Arial,sans-serif">&#10022; &nbsp; &#10022; &nbsp; &#10022;</p>
+    <p style="color:#ffffff;font-size:15px;font-style:italic;font-weight:bold;margin:0;line-height:1.6;font-family:Arial,sans-serif">&ldquo;T&uacute; eres el piloto.<br>La IA es tu copiloto.&rdquo;</p>
+    <p style="color:#C4B5FD;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:14px 0 0;font-family:Arial,sans-serif">Human.AiX</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
 </body></html>`
 
     try {
