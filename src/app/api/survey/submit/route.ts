@@ -46,35 +46,11 @@ const PROFILE_DESCRIPTIONS: Record<string, { desc: string; fortaleza: string; de
     desarrollo: 'Estructurar mejor tus instrucciones y construir flujos repetibles que ahorren tiempo consistentemente.',
     mensaje: 'El curso te dará el método y las herramientas para pasar de usuario frecuente a usuario experto.',
   },
-  'AI-Enhanced Developer': {
-    desc: 'Integras IA en tu flujo de desarrollo con resultados reales. Tu oportunidad está en elevar la calidad y velocidad de lo que ya produces.',
-    fortaleza: 'Capacidad técnica para aplicar IA en tareas de desarrollo con resultados medibles.',
-    desarrollo: 'Diseñar flujos de agentes, crear instrucciones de repositorio y elevar la calidad del código generado.',
-    mensaje: 'El curso te llevará del uso individual al diseño de flujos técnicos que multiplican tu productividad.',
-  },
-  'AI-Enhanced Architect': {
-    desc: 'Aplicas IA al análisis y diseño de sistemas con madurez técnica. Tu oportunidad está en escalar ese criterio a estándares de equipo.',
-    fortaleza: 'Visión sistémica para aplicar IA en decisiones de arquitectura y diseño técnico.',
-    desarrollo: 'Definir estándares, instrucciones de repositorio y flujos de agentes a escala de equipo.',
-    mensaje: 'El curso te ayudará a convertir tu experiencia individual en estrategia técnica compartida.',
-  },
-  'AI-Enhanced Tech Lead': {
-    desc: 'Usas IA con criterio técnico y empiezas a impactar a tu equipo. Tu oportunidad está en convertir ese uso en práctica colectiva.',
-    fortaleza: 'Capacidad de integrar IA en procesos técnicos y de liderazgo con resultados medibles.',
-    desarrollo: 'Estandarizar el uso de IA en el equipo, crear skills reutilizables y desarrollar AI Champions.',
-    mensaje: 'El curso te dará marcos para pasar de adopción individual a transformación de equipo.',
-  },
-  'AI-Enhanced Analyst': {
-    desc: 'Integras IA en tu trabajo funcional y produces mejor documentación y especificaciones. Tu oportunidad está en sistematizar ese proceso.',
-    fortaleza: 'Capacidad de usar IA para estructurar requerimientos, historias y criterios con mayor calidad.',
-    desarrollo: 'Crear plantillas y flujos reutilizables para convertir conversaciones en especificaciones listas para desarrollo.',
-    mensaje: 'El curso te ayudará a pasar de uso ocasional a un proceso sistemático de análisis asistido por IA.',
-  },
-  'AI-Enhanced Professional': {
-    desc: 'Integras IA en tu función con resultados concretos. Tu oportunidad está en sistematizar ese uso y ampliar su impacto.',
-    fortaleza: 'Capacidad práctica de aplicar IA en actividades de tu área con resultados medibles.',
-    desarrollo: 'Construir flujos y prácticas reutilizables que conviertan tu uso en un proceso repetible.',
-    mensaje: 'El curso te dará la estructura para pasar de experimentación a adopción sistemática.',
+  'AI-Enhanced': {
+    desc: 'Ya integras IA en tu trabajo con resultados reales. Tu oportunidad está en sistematizar ese uso y ampliar su impacto colectivo.',
+    fortaleza: 'Experiencia práctica y criterio para aplicar IA en tareas concretas con resultados medibles.',
+    desarrollo: 'Estructurar flujos reutilizables, mejorar la calidad del contexto que das a la IA y empezar a escalar el impacto al equipo.',
+    mensaje: 'El curso te llevará del uso individual al diseño de prácticas que multiplican tu productividad y la del equipo.',
   },
   'AI Champion': {
     desc: 'Eres un referente en adopción de IA en tu entorno. Usas múltiples herramientas con criterio y ya generas impacto más allá de tu trabajo individual.',

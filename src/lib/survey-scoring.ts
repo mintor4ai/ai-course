@@ -186,8 +186,7 @@ function getProfileName(score: number, role?: string): string {
   if (score < 25) return 'AI Explorer'
   if (score < 50) return 'AI Practitioner'
   if (score < 75) {
-    const suffix = role ? (roleSuffix[role] ?? 'Professional') : 'Professional'
-    return `AI-Enhanced ${suffix}`
+    return 'AI-Enhanced'
   }
   return 'AI Champion'
 }
