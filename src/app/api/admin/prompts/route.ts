@@ -9,6 +9,8 @@ function authorized(req: NextRequest) {
   return password === process.env.ADMIN_PASSWORD
 }
 
+const ALL_KEYS = ['diagnostic_individual', 'diagnostic_executive', 'survey_generator', 'chat_coach', 'diagnostic_mckinsey', 'plan_adoption']
+
 export async function GET(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
@@ -21,13 +23,29 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // One entry per key
-  const map: Record<string, { key: string; content: string; id: string; created_at: string }> = {}
+  // Build map from DB results
+  const map: Record<string, { key: string; content: string; id: string | null; created_at: string | null; is_default: boolean }> = {}
   for (const row of data ?? []) {
     if (!map[row.prompt_key]) {
-      map[row.prompt_key] = { key: row.prompt_key, content: row.content, id: row.id, created_at: row.created_at }
+      map[row.prompt_key] = { key: row.prompt_key, content: row.content, id: row.id, created_at: row.created_at, is_default: false }
     }
   }
+
+  // For keys with no DB version, fetch and return the hardcoded default text
+  // so the admin UI always shows something meaningful in the textarea
+  try {
+    const defaultsRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/admin/prompts/defaults`, {
+      headers: { Authorization: req.headers.get('authorization') ?? '' },
+    })
+    if (defaultsRes.ok) {
+      const { defaults } = await defaultsRes.json()
+      for (const key of ALL_KEYS) {
+        if (!map[key] && defaults[key]) {
+          map[key] = { key, content: defaults[key], id: null, created_at: null, is_default: true }
+        }
+      }
+    }
+  } catch { /* ignore — admin still gets DB versions */ }
 
   return NextResponse.json({ prompts: Object.values(map) })
 }

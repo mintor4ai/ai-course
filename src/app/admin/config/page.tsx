@@ -25,6 +25,11 @@ interface PromptConfig {
   requiredBlocks?: string[]
 }
 
+interface ActivePromptData {
+  content: string
+  is_default: boolean
+}
+
 const PROMPT_CONFIGS: PromptConfig[] = [
   {
     key: 'diagnostic_individual',
@@ -83,7 +88,7 @@ interface Respondent {
   status: string
 }
 
-function VersionHistory({ promptKey, auth, onRestore }: { promptKey: string; auth: string; onRestore: () => void }) {
+function VersionHistory({ promptKey, auth, onRestore, onLoadToEditor }: { promptKey: string; auth: string; onRestore: () => void; onLoadToEditor: (content: string) => void }) {
   const [versions, setVersions] = useState<PromptVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -152,6 +157,13 @@ function VersionHistory({ promptKey, auth, onRestore }: { promptKey: string; aut
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <button
+              onClick={() => onLoadToEditor(v.content)}
+              style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#F9FAFB', color: '#374151', fontSize: 11, cursor: 'pointer' }}
+              title="Cargar este texto en el editor"
+            >
+              ✏️ Editor
+            </button>
             {!v.is_active && (
               <>
                 <button
@@ -159,7 +171,7 @@ function VersionHistory({ promptKey, auth, onRestore }: { promptKey: string; aut
                   disabled={actionLoading === v.id}
                   style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${PB}`, background: '#fff', color: P, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 >
-                  {actionLoading === v.id ? '...' : 'Restaurar'}
+                  {actionLoading === v.id ? '...' : '● Activar'}
                 </button>
                 <button
                   onClick={() => handleDelete(v.id)}
@@ -177,8 +189,9 @@ function VersionHistory({ promptKey, auth, onRestore }: { promptKey: string; aut
   )
 }
 
-function PromptCard({ config, auth, activeContent }: { config: PromptConfig; auth: string; activeContent: string }) {
-  const [content, setContent] = useState(activeContent)
+function PromptCard({ config, auth, activeData }: { config: PromptConfig; auth: string; activeData: ActivePromptData }) {
+  const [content, setContent] = useState(activeData.content)
+  const [isDefault, setIsDefault] = useState(activeData.is_default)
   const [showGuidance, setShowGuidance] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [showTest, setShowTest] = useState(false)
@@ -195,7 +208,13 @@ function PromptCard({ config, auth, activeContent }: { config: PromptConfig; aut
   const [saved, setSaved] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
 
-  useEffect(() => { setContent(activeContent) }, [activeContent])
+  const [defaultContent, setDefaultContent] = useState(activeData.is_default ? activeData.content : '')
+
+  useEffect(() => {
+    setContent(activeData.content)
+    setIsDefault(activeData.is_default)
+    if (activeData.is_default) setDefaultContent(activeData.content)
+  }, [activeData])
 
   const loadCampaigns = useCallback(async () => {
     const res = await fetch('/api/survey/campaigns', { headers: { Authorization: auth } })
@@ -263,9 +282,14 @@ function PromptCard({ config, auth, activeContent }: { config: PromptConfig; aut
     <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
       {/* Card header */}
       <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #F3F4F6' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
           <h3 style={{ color: '#111827', fontSize: 16, fontWeight: 800, margin: 0 }}>{config.title}</h3>
           <span style={{ background: PL, color: P, border: `1px solid ${PB}`, fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 20 }}>{config.badge}</span>
+          {isDefault && (
+            <span style={{ background: '#FFF7ED', color: '#92400E', border: '1px solid #FED7AA', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+              ⚙ Usando default del código
+            </span>
+          )}
         </div>
         {config.requiredBlocks && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -351,8 +375,8 @@ function PromptCard({ config, auth, activeContent }: { config: PromptConfig; aut
         )}
       </div>
 
-      {/* Save button */}
-      <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
+      {/* Save + Default buttons */}
+      <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <button
           onClick={() => handleSave()}
           disabled={saving}
@@ -360,8 +384,28 @@ function PromptCard({ config, auth, activeContent }: { config: PromptConfig; aut
         >
           {saving ? 'Guardando...' : saved ? '✓ Guardado' : '💾 Guardar y activar'}
         </button>
-        {saved && <span style={{ color: '#16A34A', fontSize: 13, fontWeight: 600 }}>Versión activa actualizada</span>}
-        {!testedOk && <span style={{ color: '#9CA3AF', fontSize: 12 }}>Prueba el prompt para habilitar el guardado directo</span>}
+        <button
+          onClick={async () => {
+            if (!defaultContent) {
+              const res = await fetch('/api/admin/prompts/defaults', { headers: { Authorization: auth } })
+              if (res.ok) {
+                const data = await res.json()
+                const d = data.defaults?.[config.key] ?? ''
+                setDefaultContent(d)
+                setContent(d)
+              }
+            } else {
+              setContent(defaultContent)
+            }
+            setTestedOk(false)
+          }}
+          style={{ padding: '10px 16px', borderRadius: 12, border: '1.5px solid #FED7AA', background: '#FFF7ED', color: '#92400E', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          title="Restaurar el prompt original del código en el editor (sin guardarlo)"
+        >
+          ↺ Cargar default
+        </button>
+        {saved && <span style={{ color: '#16A34A', fontSize: 13, fontWeight: 600 }}>✓ Versión activa actualizada</span>}
+        {!testedOk && !saved && <span style={{ color: '#9CA3AF', fontSize: 12 }}>Prueba el prompt para habilitar el guardado directo</span>}
       </div>
 
       {/* Version history */}
@@ -375,6 +419,7 @@ function PromptCard({ config, auth, activeContent }: { config: PromptConfig; aut
             promptKey={config.key}
             auth={auth}
             onRestore={() => { setHistoryKey(k => k + 1) }}
+            onLoadToEditor={(c) => { setContent(c); setTestedOk(false) }}
           />
         )}
       </div>
@@ -388,7 +433,7 @@ export default function ConfigAdmin() {
   const [authed, setAuthed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
-  const [activePrompts, setActivePrompts] = useState<Record<string, string>>({})
+  const [activePrompts, setActivePrompts] = useState<Record<string, ActivePromptData>>({})
   const [promptsLoading, setPromptsLoading] = useState(false)
 
   const loadPrompts = useCallback(async (a: string) => {
@@ -396,9 +441,9 @@ export default function ConfigAdmin() {
     const res = await fetch('/api/admin/prompts', { headers: { Authorization: a } })
     if (res.ok) {
       const data = await res.json()
-      const map: Record<string, string> = {}
+      const map: Record<string, ActivePromptData> = {}
       for (const p of data.prompts ?? []) {
-        map[p.key] = p.content
+        map[p.key] = { content: p.content, is_default: p.is_default ?? false }
       }
       setActivePrompts(map)
     }
@@ -418,9 +463,9 @@ export default function ConfigAdmin() {
       setAuth(a)
       setAuthed(true)
       const data = await res.json()
-      const map: Record<string, string> = {}
+      const map: Record<string, ActivePromptData> = {}
       for (const p of data.prompts ?? []) {
-        map[p.key] = p.content
+        map[p.key] = { content: p.content, is_default: p.is_default ?? false }
       }
       setActivePrompts(map)
     }
@@ -476,7 +521,7 @@ export default function ConfigAdmin() {
                 key={config.key}
                 config={config}
                 auth={auth}
-                activeContent={activePrompts[config.key] ?? ''}
+                activeData={activePrompts[config.key] ?? { content: '', is_default: false }}
               />
             ))}
           </div>
