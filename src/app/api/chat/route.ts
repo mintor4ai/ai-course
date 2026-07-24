@@ -1,15 +1,24 @@
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createServiceClient } from '@/lib/supabase'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export async function POST(req: NextRequest) {
+async function getPrompt(key: string, fallback: string): Promise<string> {
   try {
-    const { messages, participant } = await req.json()
-    const { nombre = '', puesto = '', departamento = '' } = participant || {}
+    const supabase = createServiceClient()
+    const { data } = await supabase
+      .from('prompt_versions')
+      .select('content')
+      .eq('prompt_key', key)
+      .eq('is_active', true)
+      .single()
+    return data?.content ?? fallback
+  } catch { return fallback }
+}
 
-    const systemPrompt = `Eres un coach de productividad experto en automatización e IA aplicada al trabajo real.
-Tu objetivo es ayudar a ${nombre}, ${puesto} del área de ${departamento}, a identificar entre 1 y 3 tareas repetitivas de su trabajo diario que podrían automatizarse o potenciarse con IA.
+const CHAT_COACH_DEFAULT = `Eres un coach de productividad experto en automatización e IA aplicada al trabajo real.
+Tu objetivo es ayudar a {nombre}, {puesto} del área de {departamento}, a identificar entre 1 y 3 tareas repetitivas de su trabajo diario que podrían automatizarse o potenciarse con IA.
 
 REGLAS:
 - Haz UNA sola pregunta a la vez. Espera la respuesta antes de continuar.
@@ -26,6 +35,17 @@ SECUENCIA DE PREGUNTAS SUGERIDA (adapta según respuestas):
 5. Si pudieras liberar ese tiempo, ¿en qué lo invertirías?
 
 Al finalizar, presenta el resumen y pregunta: "¿Identificamos más tareas o seguimos?"`
+
+export async function POST(req: NextRequest) {
+  try {
+    const { messages, participant } = await req.json()
+    const { nombre = '', puesto = '', departamento = '' } = participant || {}
+
+    const promptTemplate = await getPrompt('chat_coach', CHAT_COACH_DEFAULT)
+    const systemPrompt = promptTemplate
+      .replace(/\{nombre\}/g, nombre)
+      .replace(/\{puesto\}/g, puesto)
+      .replace(/\{departamento\}/g, departamento)
 
     const stream = await client.messages.stream({
       model: 'claude-sonnet-4-6',

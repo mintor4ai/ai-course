@@ -1,25 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { Compromiso } from '@/lib/types'
+import { createServiceClient } from '@/lib/supabase'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export async function POST(req: NextRequest) {
+async function getPrompt(key: string, fallback: string): Promise<string> {
   try {
-    const { participant, aprendizajes, tareasResumen, impactAnswers } = await req.json()
+    const supabase = createServiceClient()
+    const { data } = await supabase
+      .from('prompt_versions')
+      .select('content')
+      .eq('prompt_key', key)
+      .eq('is_active', true)
+      .single()
+    return data?.content ?? fallback
+  } catch { return fallback }
+}
 
-    const prompt = `Eres un consultor senior de adopción de IA con mentalidad de liderazgo organizacional.
+const PLAN_ADOPTION_DEFAULT = `Eres un consultor senior de adopción de IA con mentalidad de liderazgo organizacional.
 Basándote en toda la información recopilada del participante:
 
 DATOS DISPONIBLES:
-- Nombre: ${participant.nombre}
-- Puesto: ${participant.puesto}
-- Departamento: ${participant.departamento}
-- Top 5 aprendizajes seleccionados: ${(aprendizajes || []).join(', ')}
-- Tareas repetitivas identificadas: ${tareasResumen}
-- Horas semanales que espera recuperar: ${impactAnswers?.horas_proyectadas ?? 'N/A'}
-- Área de mayor impacto: ${impactAnswers?.area_impacto ?? 'N/A'}
-- Nivel de listo para implementar: ${impactAnswers?.nivel_listo ?? 'N/A'}
+- Nombre: {nombre}
+- Puesto: {puesto}
+- Departamento: {departamento}
+- Top 5 aprendizajes seleccionados: {aprendizajes}
+- Tareas repetitivas identificadas: {tareasResumen}
+- Horas semanales que espera recuperar: {horas_proyectadas}
+- Área de mayor impacto: {area_impacto}
+- Nivel de listo para implementar: {nivel_listo}
 
 GENERA entre 3 y 4 compromisos de acción para los próximos 90 días.
 
@@ -35,6 +45,21 @@ Responde ÚNICAMENTE con un JSON array (sin markdown):
 [
   { "titulo": "...", "descripcion": "...", "metrica": "..." }
 ]`
+
+export async function POST(req: NextRequest) {
+  try {
+    const { participant, aprendizajes, tareasResumen, impactAnswers } = await req.json()
+
+    const promptTemplate = await getPrompt('plan_adoption', PLAN_ADOPTION_DEFAULT)
+    const prompt = promptTemplate
+      .replace('{nombre}', participant.nombre ?? '')
+      .replace('{puesto}', participant.puesto ?? '')
+      .replace('{departamento}', participant.departamento ?? '')
+      .replace('{aprendizajes}', (aprendizajes || []).join(', '))
+      .replace('{tareasResumen}', tareasResumen ?? '')
+      .replace('{horas_proyectadas}', impactAnswers?.horas_proyectadas ?? 'N/A')
+      .replace('{area_impacto}', impactAnswers?.area_impacto ?? 'N/A')
+      .replace('{nivel_listo}', impactAnswers?.nivel_listo ?? 'N/A')
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
