@@ -1,10 +1,14 @@
 import { createServiceClient } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import SurveyForm from './SurveyForm'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function SurveyPage({ params }: { params: { token: string } }) {
+  // Prevent browser and CDN from caching this page
+  headers()
   const supabase = createServiceClient()
   const { data: respondent } = await supabase
     .from('survey_respondents')
