@@ -126,82 +126,117 @@ PROXIMO_PASO:
 
   const profiles = ['AI Explorer', 'AI Practitioner', `AI-Enhanced ${rolLabel}`, 'AI Champion']
 
+  const scoreWidth = Math.max(4, Math.min(100, data.profileScore))
+
   return `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tu Perfil de Adopción IA — ${data.nombre}</title></head>
-<body style="margin:0;padding:0;background:#F9FAFB;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-<div style="max-width:600px;margin:0 auto;padding:24px 16px">
-  <div style="background:linear-gradient(135deg,#7C3AED,#D946EF);border-radius:20px 20px 0 0;padding:36px 32px;text-align:center">
-    <img src="https://humanaix.mx/assets/logos/LogoHumanAlta.png" alt="Human.AiX" width="140" style="display:block;margin:0 auto 20px;max-width:140px">
-    <p style="color:rgba(255,255,255,0.8);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:0 0 6px">${data.campaign.empresa} &mdash; ${data.campaign.nombre}</p>
-    <h1 style="color:#fff;font-size:24px;font-weight:800;margin:0 0 6px">Tu Perfil de Adopci&oacute;n IA</h1>
-    <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:0">${data.nombre} &middot; ${rolLabel}</p>
-  </div>
-  <div style="background:#fff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF">
-    <!-- Perfil -->
-    <div style="padding:28px 32px;border-bottom:1px solid #F3F4F6;text-align:center">
-      <p style="color:#7C3AED;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">&starf; Tu perfil actual</p>
-      <div style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#D946EF);border-radius:30px;padding:10px 28px;margin-bottom:16px">
-        <span style="color:#fff;font-size:18px;font-weight:800">${data.profileName}</span>
-      </div>
-      ${data.possibleAiChampion ? `<div style="display:inline-block;background:#FFF7ED;border:1px solid #FED7AA;border-radius:20px;padding:4px 14px;margin:0 0 12px 8px"><span style="color:#EA580C;font-size:11px;font-weight:700">⚡ Posible AI Champion</span></div>` : ''}
-      <p style="color:#374151;font-size:15px;line-height:1.8;margin:0 0 16px">${pDesc.desc}</p>
-      <table style="width:100%;border-collapse:collapse">
-        <tr>
-          <td style="padding:12px;background:#F5F3FF;border-radius:10px;text-align:center;width:48%">
-            <div style="color:#9CA3AF;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Tu fortaleza</div>
-            <div style="color:#7C3AED;font-size:13px;font-weight:600">${pDesc.fortaleza}</div>
-          </td>
-          <td style="width:4%"></td>
-          <td style="padding:12px;background:#FDF4FF;border-radius:10px;text-align:center;width:48%">
-            <div style="color:#9CA3AF;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">&Aacute;rea de desarrollo</div>
-            <div style="color:#D946EF;font-size:13px;font-weight:600">${pDesc.desarrollo}</div>
-          </td>
-        </tr>
-      </table>
-    </div>
-    <!-- Score visual -->
-    <div style="padding:24px 32px;border-bottom:1px solid #F3F4F6;background:#F5F3FF">
-      <p style="color:#7C3AED;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">&starf; Tu nivel de adopci&oacute;n IA</p>
-      <div style="display:flex;gap:8px;align-items:center">
-        <div style="flex:1;height:10px;background:#E9D5FF;border-radius:10px;overflow:hidden">
-          <div style="height:100%;background:linear-gradient(90deg,#7C3AED,#D946EF);border-radius:10px;width:${data.profileScore}%"></div>
-        </div>
-        <span style="color:#7C3AED;font-weight:800;font-size:18px;flex-shrink:0">${data.profileScore}%</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;gap:4px">
-        ${profiles.map(p => `<span style="font-size:9px;color:${p===data.profileName?'#7C3AED':'#9CA3AF'};font-weight:${p===data.profileName?700:400};text-align:center">${p}</span>`).join('')}
-      </div>
-      <div style="margin-top:16px;padding:10px 14px;background:#fff;border-radius:10px;border:1px solid #E9D5FF">
-        <p style="color:#9CA3AF;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">Nivel de curso recomendado</p>
-        <p style="color:#7C3AED;font-size:14px;font-weight:700;margin:0">${levelLabel}</p>
-      </div>
-    </div>
-    <!-- Caso rápido -->
-    <div style="padding:28px 32px;border-bottom:1px solid #F3F4F6">
-      <p style="color:#7C3AED;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">&starf; Caso pr&aacute;ctico para HOY</p>
-      <p style="color:#374151;font-size:14px;line-height:1.8;margin:0">${casoRapido.replace(/\n/g, '<br>')}</p>
-    </div>
-    <!-- Recomendación -->
-    <div style="padding:28px 32px;border-bottom:1px solid #F3F4F6">
-      <p style="color:#7C3AED;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">&starf; Recomendaci&oacute;n personalizada</p>
-      <p style="color:#374151;font-size:14px;line-height:1.8;margin:0">${recomendacion.replace(/\n/g, '<br>')}</p>
-    </div>
-    <!-- Próximo paso -->
-    <div style="padding:28px 32px">
-      <p style="color:#7C3AED;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">&starf; Tu pr&oacute;ximo paso esta semana</p>
-      <div style="background:#F5F3FF;border:1px solid #E9D5FF;border-radius:12px;padding:18px">
-        <p style="color:#374151;font-size:14px;line-height:1.8;margin:0">${proximoPaso.replace(/\n/g, '<br>')}</p>
-      </div>
-      <p style="color:#9CA3AF;font-size:12px;margin:16px 0 0;line-height:1.6">${pDesc.mensaje}</p>
-    </div>
-  </div>
-  <div style="background:linear-gradient(135deg,#7C3AED,#D946EF);border-radius:0 0 20px 20px;padding:24px 32px;text-align:center">
-    <p style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:600;margin:0 0 4px">Carlos Garc&iacute;a &amp; Rodolfo Ordorica</p>
-    <p style="color:rgba(255,255,255,0.6);font-size:12px;margin:0 0 10px">Human.AiX</p>
-    <p style="color:rgba(255,255,255,0.5);font-size:11px;font-style:italic;margin:0">&ldquo;T&uacute; eres el piloto. La IA es tu copiloto.&rdquo;</p>
-  </div>
-</div></body></html>`
+<title>Tu Perfil de Adopcion IA - ${data.nombre}</title></head>
+<body style="margin:0;padding:0;background-color:#F9FAFB;font-family:Arial,Helvetica,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F9FAFB">
+<tr><td align="center" style="padding:24px 16px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+
+  <!-- HEADER -->
+  <tr><td bgcolor="#7C3AED" style="background-color:#7C3AED;border-radius:20px 20px 0 0;padding:36px 32px;text-align:center">
+    <img src="https://humanaix.mx/assets/logos/LogoHumanAlta.png" alt="Human.AiX" width="140" style="display:block;margin:0 auto 20px">
+    <p style="color:#E9D5FF;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:0 0 6px;font-family:Arial,sans-serif">${data.campaign.empresa} &mdash; ${data.campaign.nombre}</p>
+    <p style="color:#ffffff;font-size:24px;font-weight:bold;margin:0 0 6px;font-family:Arial,sans-serif">Tu Perfil de Adopcion IA</p>
+    <p style="color:#E9D5FF;font-size:13px;margin:0;font-family:Arial,sans-serif">${data.nombre} &middot; ${rolLabel}</p>
+  </td></tr>
+
+  <!-- PERFIL ACTUAL -->
+  <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:28px 32px;border-bottom:1px solid #F3F4F6;text-align:center">
+    <p style="color:#7C3AED;font-size:10px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;margin:0 0 14px;font-family:Arial,sans-serif">&#9733; TU PERFIL ACTUAL</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px">
+      <tr><td bgcolor="#7C3AED" style="background-color:#7C3AED;border-radius:30px;padding:10px 28px;text-align:center">
+        <span style="color:#ffffff;font-size:18px;font-weight:bold;font-family:Arial,sans-serif">${data.profileName}</span>
+      </td></tr>
+    </table>
+    ${data.possibleAiChampion ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px"><tr><td style="background-color:#FFF7ED;border:1px solid #FED7AA;border-radius:20px;padding:4px 14px;text-align:center"><span style="color:#EA580C;font-size:11px;font-weight:bold;font-family:Arial,sans-serif">&#9889; Posible AI Champion</span></td></tr></table>` : ''}
+    <p style="color:#374151;font-size:15px;line-height:1.8;margin:0 0 18px;font-family:Arial,sans-serif">${pDesc.desc}</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="48%" bgcolor="#F5F3FF" style="background-color:#F5F3FF;padding:12px;text-align:center;border-radius:10px">
+          <p style="color:#6B7280;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 6px;font-family:Arial,sans-serif">TU FORTALEZA</p>
+          <p style="color:#7C3AED;font-size:13px;font-weight:bold;margin:0;font-family:Arial,sans-serif">${pDesc.fortaleza}</p>
+        </td>
+        <td width="4%">&nbsp;</td>
+        <td width="48%" bgcolor="#FDF4FF" style="background-color:#FDF4FF;padding:12px;text-align:center;border-radius:10px">
+          <p style="color:#6B7280;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 6px;font-family:Arial,sans-serif">AREA DE DESARROLLO</p>
+          <p style="color:#9333EA;font-size:13px;font-weight:bold;margin:0;font-family:Arial,sans-serif">${pDesc.desarrollo}</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- SCORE -->
+  <tr><td bgcolor="#F5F3FF" style="background-color:#F5F3FF;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:24px 32px;border-bottom:1px solid #E9D5FF">
+    <p style="color:#7C3AED;font-size:10px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;margin:0 0 14px;font-family:Arial,sans-serif">&#9733; TU NIVEL DE ADOPCION IA</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px">
+      <tr>
+        <td style="padding-right:12px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td bgcolor="#E9D5FF" style="background-color:#E9D5FF;border-radius:10px;height:12px;line-height:12px;font-size:1px">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="${scoreWidth}%">
+                  <tr><td bgcolor="#7C3AED" style="background-color:#7C3AED;border-radius:10px;height:12px;line-height:12px;font-size:1px">&nbsp;</td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+        <td style="white-space:nowrap;width:1%">
+          <span style="color:#7C3AED;font-weight:bold;font-size:20px;font-family:Arial,sans-serif">${data.profileScore}%</span>
+        </td>
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
+      <tr>
+        ${profiles.map(p => `<td style="text-align:center;padding:0 2px"><span style="font-size:9px;color:${p===data.profileName?'#7C3AED':'#9CA3AF'};font-weight:${p===data.profileName?'bold':'normal'};font-family:Arial,sans-serif">${p}</span></td>`).join('')}
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #E9D5FF;border-radius:10px;padding:12px 16px">
+        <p style="color:#9CA3AF;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;font-family:Arial,sans-serif">NIVEL DE CURSO RECOMENDADO</p>
+        <p style="color:#7C3AED;font-size:14px;font-weight:bold;margin:0;font-family:Arial,sans-serif">${levelLabel}</p>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- CASO RAPIDO -->
+  <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:28px 32px;border-bottom:1px solid #F3F4F6">
+    <p style="color:#7C3AED;font-size:10px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px;font-family:Arial,sans-serif">&#9733; CASO PRACTICO PARA HOY</p>
+    <p style="color:#374151;font-size:14px;line-height:1.8;margin:0;font-family:Arial,sans-serif">${casoRapido.replace(/\n/g, '<br>')}</p>
+  </td></tr>
+
+  <!-- RECOMENDACION -->
+  <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:28px 32px;border-bottom:1px solid #F3F4F6">
+    <p style="color:#7C3AED;font-size:10px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px;font-family:Arial,sans-serif">&#9733; RECOMENDACION PERSONALIZADA</p>
+    <p style="color:#374151;font-size:14px;line-height:1.8;margin:0;font-family:Arial,sans-serif">${recomendacion.replace(/\n/g, '<br>')}</p>
+  </td></tr>
+
+  <!-- PROXIMO PASO -->
+  <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-left:1px solid #E9D5FF;border-right:1px solid #E9D5FF;padding:28px 32px">
+    <p style="color:#7C3AED;font-size:10px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px;font-family:Arial,sans-serif">&#9733; TU PROXIMO PASO ESTA SEMANA</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
+      <tr><td bgcolor="#F5F3FF" style="background-color:#F5F3FF;border:1px solid #E9D5FF;border-radius:12px;padding:18px">
+        <p style="color:#374151;font-size:14px;line-height:1.8;margin:0;font-family:Arial,sans-serif">${proximoPaso.replace(/\n/g, '<br>')}</p>
+      </td></tr>
+    </table>
+    <p style="color:#6B7280;font-size:12px;margin:0;line-height:1.6;font-family:Arial,sans-serif">${pDesc.mensaje}</p>
+  </td></tr>
+
+  <!-- FOOTER -->
+  <tr><td bgcolor="#6D28D9" style="background-color:#6D28D9;border-radius:0 0 20px 20px;padding:24px 32px;text-align:center">
+    <p style="color:#ffffff;font-size:13px;font-weight:bold;margin:0 0 4px;font-family:Arial,sans-serif">Carlos Garcia &amp; Rodolfo Ordorica</p>
+    <p style="color:#C4B5FD;font-size:12px;margin:0 0 12px;font-family:Arial,sans-serif">Human.AiX</p>
+    <p style="color:#E9D5FF;font-size:11px;font-style:italic;margin:0;font-family:Arial,sans-serif">&ldquo;Tu eres el piloto. La IA es tu copiloto.&rdquo;</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`
 }
 
 export async function POST(req: NextRequest) {
