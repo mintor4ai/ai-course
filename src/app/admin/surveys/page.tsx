@@ -138,17 +138,29 @@ function DetailModal({ r, baseUrl, auth, onClose, onAction }: { r: Respondent; b
             </div>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-            <StatusChip status={r.status} />
-            {resp?.profile_name && (
-              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>{resp.profile_name}</span>
-            )}
-            {resp?.profile_score != null && (
-              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>Score: {resp.profile_score}%</span>
-            )}
-            {mins != null && (
-              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20 }}>{mins} min</span>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 16, flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <StatusChip status={r.status} />
+              {resp?.profile_name && (
+                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>{resp.profile_name}</span>
+              )}
+              {resp?.profile_score != null && (
+                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700 }}>Score: {resp.profile_score}%</span>
+              )}
+              {mins != null && (
+                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '2px 10px', borderRadius: 20 }}>{mins} min</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={handleReset} disabled={!!actionLoading}
+                style={{ padding: '6px 14px', border: 'none', borderRadius: 8, background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.6 : 1 }}>
+                {actionLoading === 'reset' ? '...' : '↺ Resetear'}
+              </button>
+              <button onClick={handleDelete} disabled={!!actionLoading}
+                style={{ padding: '6px 14px', border: 'none', borderRadius: 8, background: 'rgba(220,38,38,0.35)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.6 : 1 }}>
+                {actionLoading === 'delete' ? '...' : '🗑 Eliminar'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -284,17 +296,6 @@ function DetailModal({ r, baseUrl, auth, onClose, onAction }: { r: Respondent; b
                 </button>
               </div>
 
-              {/* Acciones destructivas */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 16, borderTop: '1px solid #F3F4F6' }}>
-                <button onClick={handleReset} disabled={!!actionLoading}
-                  style={{ flex: 1, padding: '10px', border: '1.5px solid #FCD34D', borderRadius: 10, background: '#FFFBEB', color: '#92400E', fontSize: 13, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.6 : 1 }}>
-                  {actionLoading === 'reset' ? 'Reseteando...' : '↺ Resetear'}
-                </button>
-                <button onClick={handleDelete} disabled={!!actionLoading}
-                  style={{ flex: 1, padding: '10px', border: '1.5px solid #FCA5A5', borderRadius: 10, background: '#FEF2F2', color: '#DC2626', fontSize: 13, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.6 : 1 }}>
-                  {actionLoading === 'delete' ? 'Eliminando...' : '🗑 Eliminar'}
-                </button>
-              </div>
 
               {r.completed_at && (
                 <p style={{ color: '#9CA3AF', fontSize: 11, textAlign: 'center', marginTop: 16, margin: '16px 0 0' }}>
