@@ -893,12 +893,7 @@ export default function SurveysAdmin() {
                         style={{ padding: '8px 18px', border: `1.5px solid #E5E7EB`, borderRadius: 10, background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
                         📊 Reportes{completed > 0 && <span style={{ fontSize: 9, background: '#D1FAE5', color: '#065F46', padding: '1px 5px', borderRadius: 6, fontWeight: 700 }}>{completed}</span>}
                       </a>
-                      <button onClick={() => setImportCampaignId(c.id)}
-                        style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        📥 Importar emails
-                      </button>
-                      {c.public_token && (
-                        <button onClick={(e) => {
+                      <button onClick={(e) => {
                           e.stopPropagation()
                           const url = `${baseUrl}/c/${c.public_token}`
                           navigator.clipboard.writeText(url)
@@ -906,10 +901,13 @@ export default function SurveysAdmin() {
                           setTimeout(() => setCopiedLinkId(null), 2000)
                           setQrCampaign(c)
                         }}
-                          style={{ padding: '8px 18px', border: `1.5px solid #BFDBFE`, borderRadius: 10, background: copiedLinkId === c.id ? '#D1FAE5' : '#EFF6FF', color: copiedLinkId === c.id ? '#065F46' : '#3B82F6', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                          {copiedLinkId === c.id ? '✓ Copiado' : '🔗 Link público'}
-                        </button>
-                      )}
+                        style={{ padding: '8px 18px', border: `1.5px solid #BFDBFE`, borderRadius: 10, background: copiedLinkId === c.id ? '#D1FAE5' : '#EFF6FF', color: copiedLinkId === c.id ? '#065F46' : '#3B82F6', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        {copiedLinkId === c.id ? '✓ Copiado' : '🔗 Link público'}
+                      </button>
+                      <button onClick={() => setImportCampaignId(c.id)}
+                        style={{ padding: '8px 18px', border: `1.5px solid ${PB}`, borderRadius: 10, background: '#fff', color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        📥 Importar emails
+                      </button>
                       {inviteMode === c.id ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 10, padding: '6px 14px' }}>
                           <span style={{ fontSize: 12, color: '#92400E', fontWeight: 600 }}>
