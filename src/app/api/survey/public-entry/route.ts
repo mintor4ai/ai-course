@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
-  const { public_token, nombre, email, role } = await req.json()
+  const { public_token, nombre, email } = await req.json()
 
   if (!public_token || !nombre || !email) {
     return NextResponse.json({ error: 'Campos requeridos: public_token, nombre, email' }, { status: 400 })
@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
       nombre: nombre.trim(),
       source: 'public_link',
       status: 'pending',
-      ...(role ? { role: role.trim() } : {}),
     })
     .select('token')
     .single()
