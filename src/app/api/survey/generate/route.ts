@@ -13,7 +13,20 @@ function authorized(req: NextRequest) {
   return password === process.env.ADMIN_PASSWORD
 }
 
-const SYSTEM_PROMPT = `Eres un experto en diseño de encuestas de diagnóstico para programas de capacitación en inteligencia artificial. Tu tarea es generar una encuesta personalizada en formato JSON.
+async function getPrompt(key: string, fallback: string): Promise<string> {
+  try {
+    const supabase = createServiceClient()
+    const { data } = await supabase
+      .from('prompt_versions')
+      .select('content')
+      .eq('prompt_key', key)
+      .eq('is_active', true)
+      .single()
+    return data?.content ?? fallback
+  } catch { return fallback }
+}
+
+const SURVEY_GENERATOR_DEFAULT = `Eres un experto en diseño de encuestas de diagnóstico para programas de capacitación en inteligencia artificial. Tu tarea es generar una encuesta personalizada en formato JSON.
 
 REGLAS OBLIGATORIAS:
 1. Responde ÚNICAMENTE con el objeto JSON — sin markdown, sin bloques de código, sin explicaciones
@@ -71,6 +84,8 @@ export async function POST(req: NextRequest) {
   if (!campaignId || !prompt?.trim()) {
     return NextResponse.json({ error: 'campaignId y prompt requeridos' }, { status: 400 })
   }
+
+  const SYSTEM_PROMPT = await getPrompt('survey_generator', SURVEY_GENERATOR_DEFAULT)
 
   // Fetch campaign context
   const supabase = createServiceClient()

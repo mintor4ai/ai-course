@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { createServiceClient } from '@/lib/supabase'
+
 function authorized(req: NextRequest) {
   const auth = req.headers.get('authorization') ?? ''
   const [, b64] = auth.split(' ')
@@ -8,7 +10,22 @@ function authorized(req: NextRequest) {
   return password === process.env.ADMIN_PASSWORD
 }
 
-function buildPrompt(stats: any): string {
+async function getPrompt(key: string, fallback: string): Promise<string> {
+  try {
+    const supabase = createServiceClient()
+    const { data } = await supabase
+      .from('prompt_versions')
+      .select('content')
+      .eq('prompt_key', key)
+      .eq('is_active', true)
+      .single()
+    return data?.content ?? fallback
+  } catch { return fallback }
+}
+
+const DIAGNOSTIC_EXECUTIVE_DEFAULT = `Eres consultor senior de transformación digital de Human.AiX. Genera un diagnóstico ejecutivo del cohorte en español. Responde SOLO con el diagnóstico, sin encabezados extra. Estructura: 4 párrafos. Párrafo 1: estado actual del grupo. Párrafo 2: fortalezas colectivas detectadas. Párrafo 3: brechas críticas y riesgos. Párrafo 4: recomendaciones concretas para el diseño del programa. Sé específico, usa los datos. Tono ejecutivo, no académico.`
+
+function buildPrompt(staticInstructions: string, stats: any): string {
   const {
     campaign,
     totalSent,
@@ -57,7 +74,7 @@ function buildPrompt(stats: any): string {
     ? courseExpectations.map((t, i) => `  ${i + 1}. "${t}"`).join('\n')
     : '  (sin respuestas)'
 
-  return `Eres consultor senior de transformación digital de Human.AiX. Genera un diagnóstico ejecutivo del cohorte en español. Responde SOLO con el diagnóstico, sin encabezados extra. Estructura: 4 párrafos. Párrafo 1: estado actual del grupo. Párrafo 2: fortalezas colectivas detectadas. Párrafo 3: brechas críticas y riesgos. Párrafo 4: recomendaciones concretas para el diseño del programa. Sé específico, usa los datos. Tono ejecutivo, no académico.
+  return `${staticInstructions}
 
 ---
 
@@ -109,7 +126,8 @@ export async function POST(
     return NextResponse.json({ error: 'Missing stats in body' }, { status: 400 })
   }
 
-  const prompt = buildPrompt(stats)
+  const staticInstructions = await getPrompt('diagnostic_executive', DIAGNOSTIC_EXECUTIVE_DEFAULT)
+  const prompt = buildPrompt(staticInstructions, stats)
 
   try {
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {

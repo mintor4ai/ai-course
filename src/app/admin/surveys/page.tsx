@@ -638,6 +638,9 @@ export default function SurveysAdmin() {
           <span style={{ color: P, fontSize: 13, fontWeight: 700 }}>Encuestas de Adopción IA</span>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <a href="/admin/config" style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${PB}`, background: PL, color: P, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+            ⚙ Config
+          </a>
           <a href="/admin" style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #E5E7EB', background: '#fff', color: '#6B7280', fontSize: 13, textDecoration: 'none' }}>
             Diagnósticos Post-Curso
           </a>

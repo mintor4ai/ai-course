@@ -8,24 +8,31 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const HOURS_YEAR: Record<string, number> = { '1h': 52, '2h': 104, '3h': 156, '5h': 260, '8h': 416, '+8h': 520 }
 
-export async function POST(req: NextRequest) {
+async function getPrompt(key: string, fallback: string): Promise<string> {
   try {
-    const { participant, participantId, aprendizajes, tareasResumen, impactAnswers, plan90Dias } = await req.json()
-    const fecha = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })
-    const horasAnio = HOURS_YEAR[impactAnswers?.horas_proyectadas] ?? '?'
+    const supabase = createServiceClient()
+    const { data } = await supabase
+      .from('prompt_versions')
+      .select('content')
+      .eq('prompt_key', key)
+      .eq('is_active', true)
+      .single()
+    return data?.content ?? fallback
+  } catch { return fallback }
+}
 
-    const prompt = `Eres un consultor senior de una firma de estrategia de primer nivel (estilo McKinsey).
+const DIAGNOSTIC_MCKINSEY_DEFAULT = `Eres un consultor senior de una firma de estrategia de primer nivel (estilo McKinsey).
 Genera contenido de texto para un diagnóstico ejecutivo en español para un participante del curso "Desbloquea el Chip de IA" de Human.AiX.
 
 DATOS:
-- Nombre: ${participant.nombre}
-- Puesto: ${participant.puesto}
-- Departamento: ${participant.departamento}
-- Top 5 aprendizajes: ${(aprendizajes || []).join('; ')}
-- Tareas repetitivas: ${tareasResumen}
-- Horas/semana proyectadas a recuperar: ${impactAnswers?.horas_proyectadas ?? 'N/A'}
-- Área de mayor impacto: ${impactAnswers?.area_impacto ?? 'N/A'}
-- Nivel de listo: ${impactAnswers?.nivel_listo ?? 'N/A'}
+- Nombre: {nombre}
+- Puesto: {puesto}
+- Departamento: {departamento}
+- Top 5 aprendizajes: {aprendizajes}
+- Tareas repetitivas: {tareasResumen}
+- Horas/semana proyectadas a recuperar: {horas_proyectadas}
+- Área de mayor impacto: {area_impacto}
+- Nivel de listo: {nivel_listo}
 
 Genera SOLO estos bloques (texto plano, sin HTML):
 
@@ -37,6 +44,23 @@ OPORTUNIDADES:
 
 CIERRE:
 [2-3 líneas motivacionales con mantras del curso: "La IA amplifica tu talento, no lo reemplaza." "Tú eres el piloto. La IA es tu copiloto."]`
+
+export async function POST(req: NextRequest) {
+  try {
+    const { participant, participantId, aprendizajes, tareasResumen, impactAnswers, plan90Dias } = await req.json()
+    const fecha = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })
+    const horasAnio = HOURS_YEAR[impactAnswers?.horas_proyectadas] ?? '?'
+
+    const promptTemplate = await getPrompt('diagnostic_mckinsey', DIAGNOSTIC_MCKINSEY_DEFAULT)
+    const prompt = promptTemplate
+      .replace('{nombre}', participant.nombre ?? '')
+      .replace('{puesto}', participant.puesto ?? '')
+      .replace('{departamento}', participant.departamento ?? '')
+      .replace('{aprendizajes}', (aprendizajes || []).join('; '))
+      .replace('{tareasResumen}', tareasResumen ?? '')
+      .replace('{horas_proyectadas}', impactAnswers?.horas_proyectadas ?? 'N/A')
+      .replace('{area_impacto}', impactAnswers?.area_impacto ?? 'N/A')
+      .replace('{nivel_listo}', impactAnswers?.nivel_listo ?? 'N/A')
 
     const aiResp = await client.messages.create({
       model: 'claude-sonnet-4-6',

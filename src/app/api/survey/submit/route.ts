@@ -7,6 +7,32 @@ import { ROLE_LABELS } from '@/lib/survey-config'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+async function getPrompt(key: string, fallback: string): Promise<string> {
+  try {
+    const supabase = createServiceClient()
+    const { data } = await supabase
+      .from('prompt_versions')
+      .select('content')
+      .eq('prompt_key', key)
+      .eq('is_active', true)
+      .single()
+    return data?.content ?? fallback
+  } catch { return fallback }
+}
+
+const DIAGNOSTIC_INDIVIDUAL_DEFAULT = `Eres consultor senior de transformación digital de Human.AiX. Genera recomendaciones ejecutivas personalizadas en español.
+
+Genera SOLO estos 3 bloques (texto plano, sin HTML, en español):
+
+CASO_RAPIDO:
+[Un caso de uso concreto que puede ejecutar HOY, en menos de 30 min, relacionado directamente con su tarea frecuente y función. Incluye: qué herramienta usar, qué pedirle exactamente, qué resultado obtendrá.]
+
+RECOMENDACION:
+[2-3 oraciones ejecutivas sobre su momento actual con la IA y qué debería priorizar los próximos 30 días. Específico para su función y nivel.]
+
+PROXIMO_PASO:
+[Una acción concreta que puede hacer esta semana para avanzar hacia el siguiente perfil de adopción.]`
+
 const PROFILE_DESCRIPTIONS: Record<string, { desc: string; fortaleza: string; desarrollo: string; mensaje: string }> = {
   'AI Explorer': {
     desc: 'Estás iniciando tu relación con la inteligencia artificial. La curiosidad y apertura que traes son el punto de partida más valioso.',
@@ -87,8 +113,9 @@ async function generateDiagnosticHtml(data: {
   const tools = (data.answers['ai_tools_used'] as string[] | undefined ?? []).filter(t => t !== 'none').join(', ')
   const barrier = data.answers['primary_ai_adoption_barrier'] as string | undefined
 
-  const prompt = `Eres consultor senior de transformación digital de Human.AiX. Genera recomendaciones ejecutivas personalizadas en español.
+  const staticInstructions = await getPrompt('diagnostic_individual', DIAGNOSTIC_INDIVIDUAL_DEFAULT)
 
+  const dataBlock = `
 PERFIL DEL PARTICIPANTE:
 - Nombre: ${data.nombre}
 - Función: ${rolLabel}
@@ -102,18 +129,9 @@ PERFIL DEL PARTICIPANTE:
 - Expectativa del curso: ${expectation}
 
 DIMENSIONES (0-100):
-${Object.entries(data.dimensions).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(data.dimensions).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
 
-Genera SOLO estos 3 bloques (texto plano, sin HTML, en español):
-
-CASO_RAPIDO:
-[Un caso de uso concreto que puede ejecutar HOY, en menos de 30 min, relacionado directamente con su tarea frecuente y función. Incluye: qué herramienta usar, qué pedirle exactamente, qué resultado obtendrá.]
-
-RECOMENDACION:
-[2-3 oraciones ejecutivas sobre su momento actual con la IA y qué debería priorizar los próximos 30 días. Específico para su función y nivel.]
-
-PROXIMO_PASO:
-[Una acción concreta que puede hacer esta semana para avanzar hacia el siguiente perfil de adopción.]`
+  const prompt = `${staticInstructions}\n${dataBlock}`
 
   const resp = await client.messages.create({
     model: 'claude-sonnet-4-6', max_tokens: 900,
