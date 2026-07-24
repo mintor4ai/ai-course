@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase'
 
 function authorized(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('survey_campaigns')
-    .select('id, nombre, empresa, tipo, descripcion, survey_version, status, created_at, survey_config, draft_config, config_status')
+    .select('id, nombre, empresa, tipo, descripcion, survey_version, status, created_at, survey_config, draft_config, config_status, public_token')
     .order('created_at', { ascending: false })
 
   if (tipo) query = query.eq('tipo', tipo)
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('survey_campaigns')
-    .insert({ nombre, empresa, tipo, descripcion, status: 'active' })
+    .insert({ nombre, empresa, tipo, descripcion, status: 'active', public_token: crypto.randomBytes(12).toString('hex') })
     .select('id').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

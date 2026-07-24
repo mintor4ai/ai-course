@@ -14,6 +14,7 @@
     "googleapis": "^140.0.1",
     "next": "14.2.5",
     "nodemailer": "^6.9.14",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^18",
     "react-dom": "^18"
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.15",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",

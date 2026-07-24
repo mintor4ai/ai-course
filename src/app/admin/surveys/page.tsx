@@ -15,6 +15,7 @@ interface Campaign {
   survey_config?: Record<string, unknown>
   draft_config?: Record<string, unknown>
   config_status?: string
+  public_token?: string
 }
 interface SurveyResponse {
   profile_name?: string
@@ -42,6 +43,7 @@ interface Notification {
 interface Respondent {
   id: string; email: string; nombre?: string; token: string
   status: string; sent_at?: string; completed_at?: string
+  source?: string
   survey_responses?: SurveyResponse[] | SurveyResponse | null
 }
 
