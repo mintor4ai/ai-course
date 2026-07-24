@@ -89,10 +89,25 @@ const DIMENSION_LABELS: Record<string, string> = {
   team_adoption: 'Adopción en equipo', ai_leadership: 'Liderazgo IA', change_readiness: 'Disposición al cambio',
 }
 
-function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; onClose: () => void }) {
+function DetailModal({ r, baseUrl, auth, onClose, onAction }: { r: Respondent; baseUrl: string; auth: string; onClose: () => void; onAction: () => void }) {
   const resp = getResp(r)
   const answers = resp?.answers as Record<string, unknown> | undefined
   const mins = resp?.completion_time_seconds ? Math.round(resp.completion_time_seconds / 60) : null
+  const [actionLoading, setActionLoading] = useState<'delete' | 'reset' | null>(null)
+
+  const handleDelete = async () => {
+    if (!confirm(`¿Eliminar permanentemente a ${r.nombre ?? r.email}? Esta acción no se puede deshacer.`)) return
+    setActionLoading('delete')
+    await fetch('/api/survey/respondents', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({ respondentId: r.id }) })
+    setActionLoading(null); onAction(); onClose()
+  }
+
+  const handleReset = async () => {
+    if (!confirm(`¿Resetear a ${r.nombre ?? r.email}? Se borrarán sus respuestas y volverá a estado Pendiente.`)) return
+    setActionLoading('reset')
+    await fetch('/api/survey/respondents', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({ respondentId: r.id }) })
+    setActionLoading(null); onAction(); onClose()
+  }
 
   const downloadDiagnostic = () => {
     if (!resp?.diagnostic_html) return
@@ -266,6 +281,18 @@ function DetailModal({ r, baseUrl, onClose }: { r: Respondent; baseUrl: string; 
                 <button onClick={() => navigator.clipboard.writeText(`${baseUrl}/s/${r.token}`)}
                   style={{ padding: '12px 20px', border: `1.5px solid ${PB}`, borderRadius: 12, background: PL, color: P, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   Copiar URL
+                </button>
+              </div>
+
+              {/* Acciones destructivas */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 16, borderTop: '1px solid #F3F4F6' }}>
+                <button onClick={handleReset} disabled={!!actionLoading}
+                  style={{ flex: 1, padding: '10px', border: '1.5px solid #FCD34D', borderRadius: 10, background: '#FFFBEB', color: '#92400E', fontSize: 13, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.6 : 1 }}>
+                  {actionLoading === 'reset' ? 'Reseteando...' : '↺ Resetear'}
+                </button>
+                <button onClick={handleDelete} disabled={!!actionLoading}
+                  style={{ flex: 1, padding: '10px', border: '1.5px solid #FCA5A5', borderRadius: 10, background: '#FEF2F2', color: '#DC2626', fontSize: 13, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.6 : 1 }}>
+                  {actionLoading === 'delete' ? 'Eliminando...' : '🗑 Eliminar'}
                 </button>
               </div>
 
@@ -953,7 +980,11 @@ export default function SurveysAdmin() {
         <DetailModal
           r={selectedRespondent}
           baseUrl={baseUrl}
+          auth={auth}
           onClose={() => setSelectedRespondent(null)}
+          onAction={() => {
+            if (expanded) fetchRespondents(expanded)
+          }}
         />
       )}
       {designCampaign && (

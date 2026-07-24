@@ -51,3 +51,29 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ imported: data?.length ?? 0, total: rows.length })
 }
+
+// DELETE — remove respondent and all their responses
+export async function DELETE(req: NextRequest) {
+  if (!authorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const { respondentId } = await req.json()
+  if (!respondentId) return NextResponse.json({ error: 'respondentId requerido' }, { status: 400 })
+  const supabase = createServiceClient()
+  const { error } = await supabase.from('survey_respondents').delete().eq('id', respondentId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+// PATCH — reset respondent: delete response, set status back to pending
+export async function PATCH(req: NextRequest) {
+  if (!authorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const { respondentId } = await req.json()
+  if (!respondentId) return NextResponse.json({ error: 'respondentId requerido' }, { status: 400 })
+  const supabase = createServiceClient()
+  await supabase.from('survey_responses').delete().eq('respondent_id', respondentId)
+  await supabase.from('survey_notifications').delete().eq('respondent_id', respondentId)
+  const { error } = await supabase.from('survey_respondents')
+    .update({ status: 'pending', sent_at: null, completed_at: null, invite_count: 0 })
+    .eq('id', respondentId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
