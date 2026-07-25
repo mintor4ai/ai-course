@@ -855,7 +855,7 @@ export default function SurveysAdmin() {
           {/* Bell */}
           <div style={{ position: 'relative' }}>
             <button
-              onClick={() => { setShowNotifs(v => !v); if (!showNotifs) markAllRead() }}
+              onClick={(e) => { e.stopPropagation(); setShowNotifs(v => !v); if (!showNotifs) markAllRead() }}
               style={{ position: 'relative', width: 38, height: 38, borderRadius: '50%', border: `1.5px solid ${notifications.some(n => !n.read) ? PB : '#E5E7EB'}`, background: notifications.some(n => !n.read) ? PL : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>
               🔔
               {notifications.filter(n => !n.read).length > 0 && (
