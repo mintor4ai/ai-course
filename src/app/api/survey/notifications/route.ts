@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .from('survey_notifications')
     .select('id, campaign_id, respondent_id, campaign_name, respondent_email, respondent_nombre, profile_name, profile_score, read, created_at')
     .order('created_at', { ascending: false })
-    .limit(50)
+    .limit(5)
   return NextResponse.json({ notifications: data ?? [] })
 }
 
