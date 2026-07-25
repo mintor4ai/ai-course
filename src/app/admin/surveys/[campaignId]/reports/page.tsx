@@ -88,6 +88,7 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
   // Narrative state
   const [narrativeStatus, setNarrativeStatus] = useState<'idle' | 'loading' | 'done'>('idle')
   const [narrative, setNarrative] = useState<string | null>(null)
+  const [narrativeUpdatedAt, setNarrativeUpdatedAt] = useState<string | null>(null)
 
   // Table state
   const [search, setSearch] = useState('')
@@ -163,6 +164,13 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
         }),
       }
       setData(mapped)
+
+      // Load saved narrative if available
+      if (json.executiveNarrative) {
+        setNarrative(json.executiveNarrative)
+        setNarrativeUpdatedAt(json.executiveNarrativeUpdatedAt ?? null)
+        setNarrativeStatus('done')
+      }
     } catch (e: unknown) {
       setFetchError(e instanceof Error ? e.message : 'Error desconocido')
     } finally {
@@ -191,6 +199,7 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
       if (!res.ok) throw new Error('Error generando diagnóstico')
       const json = await res.json()
       setNarrative(json.narrative ?? json.text ?? JSON.stringify(json))
+      setNarrativeUpdatedAt(new Date().toISOString())
       setNarrativeStatus('done')
     } catch {
       setNarrativeStatus('idle')
@@ -631,22 +640,28 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
               {narrative.split('\n\n').map((para, i) => (
                 <p key={i} style={{ fontSize: 14, lineHeight: 1.8, color: '#374151', margin: '0 0 14px' }}>{para}</p>
               ))}
-              <button
-                className="no-print"
-                onClick={generateNarrative}
-                style={{
-                  background: '#F5F3FF',
-                  color: '#7C3AED',
-                  border: '1px solid #E9D5FF',
-                  borderRadius: 8,
-                  padding: '8px 16px',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                }}
-              >
-                ↻ Regenerar
-              </button>
+              <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                <button
+                  onClick={generateNarrative}
+                  style={{
+                    background: '#F5F3FF',
+                    color: '#7C3AED',
+                    border: '1px solid #E9D5FF',
+                    borderRadius: 8,
+                    padding: '8px 16px',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  ↻ Regenerar
+                </button>
+                {narrativeUpdatedAt && (
+                  <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+                    Generado: {new Date(narrativeUpdatedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>

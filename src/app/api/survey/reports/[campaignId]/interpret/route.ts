@@ -159,6 +159,17 @@ export async function POST(
     const claudeData = await claudeRes.json()
     const narrative: string = claudeData.content?.[0]?.text ?? ''
 
+    // Persist narrative to campaign
+    try {
+      const supabase = createServiceClient()
+      await supabase
+        .from('survey_campaigns')
+        .update({ executive_narrative: narrative, executive_narrative_updated_at: new Date().toISOString() })
+        .eq('id', params.campaignId)
+    } catch (e) {
+      console.error('Error saving narrative:', e)
+    }
+
     return NextResponse.json({ narrative })
   } catch (err) {
     console.error('Error calling Claude API:', err)

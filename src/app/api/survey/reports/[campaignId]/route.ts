@@ -23,7 +23,7 @@ export async function GET(
   // 1. Fetch campaign
   const { data: campaign, error: campaignError } = await supabase
     .from('survey_campaigns')
-    .select('id, nombre, empresa, tipo, descripcion, status, survey_config, company_context')
+    .select('id, nombre, empresa, tipo, descripcion, status, survey_config, company_context, executive_narrative, executive_narrative_updated_at')
     .eq('id', campaignId)
     .single()
 
@@ -143,6 +143,8 @@ export async function GET(
 
   return NextResponse.json({
     campaign,
+    executiveNarrative: campaign.executive_narrative ?? null,
+    executiveNarrativeUpdatedAt: campaign.executive_narrative_updated_at ?? null,
     totalSent,
     totalCompleted,
     responseRate,
