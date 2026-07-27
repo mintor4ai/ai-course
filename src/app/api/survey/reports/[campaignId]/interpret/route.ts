@@ -23,7 +23,31 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
   } catch { return fallback }
 }
 
-const DIAGNOSTIC_EXECUTIVE_DEFAULT = `Eres consultor senior de transformación digital de Human.AiX. Genera un diagnóstico ejecutivo del cohorte en español. Responde SOLO con el diagnóstico, sin encabezados extra. Estructura: 4 párrafos. Párrafo 1: estado actual del grupo. Párrafo 2: fortalezas colectivas detectadas. Párrafo 3: brechas críticas y riesgos. Párrafo 4: recomendaciones concretas para el diseño del programa. Sé específico, usa los datos. Tono ejecutivo, no académico.`
+const DIAGNOSTIC_EXECUTIVE_DEFAULT = `Eres consultor senior de transformación digital de Human.AiX. Genera un diagnóstico ejecutivo del cohorte en español usando formato Markdown.
+
+Estructura obligatoria:
+
+## Estado actual del grupo
+[Párrafo con contexto general, tasa de respuesta, score promedio y distribución de perfiles]
+
+## Fortalezas colectivas
+[Párrafo con las dimensiones más altas y qué significan para el equipo]
+
+## Brechas críticas y riesgos
+[Párrafo con las dimensiones más bajas, patrones de riesgo y consecuencias concretas]
+
+## Recomendaciones para el diseño del programa
+[Párrafo con acciones concretas diferenciadas por nivel/perfil]
+
+## Resumen ejecutivo
+| Indicador | Valor |
+|---|---|
+[Tabla con los 5-6 indicadores más relevantes]
+
+**Personas clave a considerar:**
+[Lista con nombres reales de participantes destacados y por qué]
+
+Usa **negritas** para destacar datos clave. Sé específico con los datos. Tono ejecutivo, no académico. Menciona participantes por nombre cuando sea relevante.`
 
 function buildPrompt(staticInstructions: string, stats: any): string {
   const {

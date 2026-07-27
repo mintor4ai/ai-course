@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useRouter } from 'next/navigation'
 import { RadarChart, HorizontalBar, ProfileBadge } from './ReportCharts'
 
@@ -637,9 +639,9 @@ export default function SurveyReportsPage({ params }: { params: { campaignId: st
 
           {narrativeStatus === 'done' && narrative && (
             <div>
-              {narrative.split('\n\n').map((para, i) => (
-                <p key={i} style={{ fontSize: 14, lineHeight: 1.8, color: '#374151', margin: '0 0 14px' }}>{para}</p>
-              ))}
+              <div style={{ fontSize: 14, lineHeight: 1.8, color: '#374151' }} className="markdown-narrative">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{narrative}</ReactMarkdown>
+              </div>
               <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
                 <button
                   onClick={generateNarrative}
