@@ -85,12 +85,19 @@ async function generateDiagnosticHtml(data: {
   const rolLabel = ROLE_LABELS[data.role] ?? data.role
   const levelLabel = COURSE_LEVEL_LABELS[data.courseLevel] ?? data.courseLevel
 
-  const frequentTask = (data.answers['frequent_time_consuming_task'] as string | undefined) ?? ''
-  const expectation = (data.answers['course_value_expectation'] as string | undefined) ?? ''
-  const tools = (data.answers['ai_tools_used'] as string[] | undefined ?? []).filter(t => t !== 'none').join(', ')
-  const barrier = data.answers['primary_ai_adoption_barrier'] as string | undefined
-
   const staticInstructions = await getPrompt('diagnostic_individual', DIAGNOSTIC_INDIVIDUAL_DEFAULT)
+
+  // Extract all text/long_text answers
+  const textAnswers = Object.entries(data.answers)
+    .filter(([, v]) => typeof v === 'string' && (v as string).length > 2)
+    .map(([k, v]) => `- ${k}: "${v}"`)
+    .join('\n')
+
+  // Extract all multi_select answers
+  const arrayAnswers = Object.entries(data.answers)
+    .filter(([, v]) => Array.isArray(v) && (v as unknown[]).length > 0)
+    .map(([k, v]) => `- ${k}: ${(v as string[]).filter(x => x !== 'none').join(', ')}`)
+    .join('\n')
 
   const dataBlock = `
 CONTEXTO DE LA EMPRESA:
@@ -103,18 +110,20 @@ PERFIL DEL PARTICIPANTE:
 - Perfil IA: ${data.profileName} (score ${data.profileScore}/100)
 - Nivel de curso recomendado: ${levelLabel}
 - Posible AI Champion: ${data.possibleAiChampion ? 'Sí' : 'No'}
-- Herramientas usadas: ${tools || 'ninguna todavía'}
-- Principal barrera: ${barrier ?? 'no especificada'}
-- Tarea frecuente: ${frequentTask}
-- Expectativa del curso: ${expectation}
 
-DIMENSIONES (0-100):
-${Object.entries(data.dimensions).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
+DIMENSIONES DE ADOPCIÓN (0-100):
+${Object.entries(data.dimensions).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+RESPUESTAS DE SELECCIÓN MÚLTIPLE:
+${arrayAnswers || '(ninguna)'}
+
+RESPUESTAS ABIERTAS:
+${textAnswers || '(ninguna)'}`
 
   const prompt = `${staticInstructions}\n${dataBlock}`
 
   const resp = await client.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: 900,
+    model: 'claude-sonnet-4-6', max_tokens: 1200,
     messages: [{ role: 'user', content: prompt }],
   })
   const txt = resp.content[0].type === 'text' ? resp.content[0].text : ''
