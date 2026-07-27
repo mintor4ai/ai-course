@@ -49,14 +49,16 @@ ESTRUCTURA DE SECCIÓN:
 
 ESTRUCTURA DE PREGUNTA:
 {
-  "id": "Q01",           // Incremental Q01, Q02, ...
-  "column": "nombre_columna",  // snake_case único, descriptivo
+  "id": "Q01",
+  "column": "nombre_columna",
   "label": "Texto de la pregunta",
   "type": "...",
   "required": true,
-  "options": [{ "value": "valor_unico", "label": "Etiqueta visible", "score": 0 }],  // solo si aplica
-  "showIfColumn": "otra_columna",  // opcional: mostrar solo si otra respuesta...
-  "showIfValue": "valor_esperado", // ...es igual a este valor
+  "scoreDimension": "ai_adoption",   // VER REGLAS DE SCORING ABAJO
+  "options": [{ "value": "valor_unico", "label": "Etiqueta visible", "score": 0 }],
+  "highValueOptions": ["valor1", "valor2"],  // solo en multi_select con scoreDimension
+  "showIfColumn": "otra_columna",
+  "showIfValue": "valor_esperado",
   "helpText": "Instrucción adicional",
   "minLength": 30,
   "maxLength": 500,
@@ -64,15 +66,51 @@ ESTRUCTURA DE PREGUNTA:
   "scaleLabels": {"1": "Nada", "5": "Mucho"}
 }
 
+═══════════════════════════════════════════════
+REGLAS DE SCORING — MUY IMPORTANTE
+═══════════════════════════════════════════════
+
+Cada pregunta que mida adopción de IA DEBE tener "scoreDimension" asignado.
+Usa EXACTAMENTE uno de estos 9 valores (metodología estándar Human.AiX):
+
+  "ai_adoption"            → frecuencia de uso, nivel de confianza con IA
+  "tool_exposure"          → herramientas conocidas, casos de uso actuales
+  "context_engineering"    → calidad del contexto que da a la IA, prompting
+  "specification_maturity" → claridad de requerimientos, documentación de procesos
+  "documentation_maturity" → madurez de documentación interna, registros
+  "agent_readiness"        → reglas de equipo documentadas, procesos formales
+  "team_adoption"          → adopción de IA en el equipo, prácticas compartidas
+  "ai_leadership"          → liderazgo en IA, compartir buenas prácticas
+  "change_readiness"       → disposición al cambio, apertura a nuevas tecnologías
+
+REGLAS POR TIPO DE PREGUNTA:
+- single_select con scoreDimension: agrega "score" a cada opción (0 al máximo, gradual).
+  El máximo debe ser 4 o 5. Las opciones "No aplica" o "Ninguna" tienen score: null.
+- scale con scoreDimension: no necesita scores en opciones, se calcula del min/max.
+- multi_select con scoreDimension: agrega "highValueOptions" con los valores que indican mayor madurez.
+  No pongas "score" en las opciones individuales del multi_select.
+
+PREGUNTAS SIN scoreDimension (no afectan el score):
+- Perfil: nombre, email, rol, antigüedad, tipo de proyecto, área
+- Texto abierto (long_text): casos reales, comentarios, descripciones
+- Preguntas de contexto que no miden adopción IA
+- Barreras y preocupaciones (son cualitativos, no score)
+- Software/herramientas no-IA que usa actualmente
+
+ASIGNACIÓN OBLIGATORIA — al menos UNA pregunta por cada una de estas dimensiones:
+  ai_adoption, tool_exposure, change_readiness
+
+Las demás dimensiones asígnalas cuando el contexto de la encuesta lo permita naturalmente.
+═══════════════════════════════════════════════
+
 LINEAMIENTOS DE DISEÑO:
 - Entre 4 y 8 secciones. Entre 2 y 6 preguntas por sección.
 - Total de preguntas: 16 a 28.
 - Primera sección: perfil básico del participante (nombre, email, rol, antigüedad).
-- Última sección: expectativas y disposición al cambio.
-- Usa preguntas abiertas (long_text) solo para capturar casos reales o contexto específico.
+- Última sección: expectativas y disposición al cambio (incluir change_readiness).
+- Usa preguntas abiertas (long_text) para capturar contexto específico de la industria.
 - Usa scale para auto-evaluaciones de confianza o frecuencia.
-- Usa single_select con opciones graduales cuando quieras scoring.
-- Incluye "score" en opciones de single_select que quieras ponderar (0 a 5).
+- Usa single_select con opciones graduales y score para medir adopción.
 - Usa isNone:true para opciones como "Ninguna" o "No aplica" en multi_select.
 - Todo el contenido en ESPAÑOL de México.
 - Sé específico al contexto de la empresa y el tipo de programa descrito.`
