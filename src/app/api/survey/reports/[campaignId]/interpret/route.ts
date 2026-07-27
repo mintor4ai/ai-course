@@ -170,7 +170,7 @@ export async function POST(
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 3500,
+        max_tokens: 4500,
         messages: [{ role: 'user', content: prompt }],
       }),
     })
